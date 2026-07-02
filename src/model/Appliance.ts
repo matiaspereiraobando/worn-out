@@ -18,6 +18,7 @@ export class Appliance {
 
   hp: number;
   alive = true;
+  plugged = true;
   /** Seconds of remaining "clean" decay-reduction buff. */
   cleanBuffSec = 0;
   /** Seconds of remaining clean cooldown. */
@@ -55,6 +56,7 @@ export class Appliance {
     if (this.cleanCooldownSec > 0) this.cleanCooldownSec = Math.max(0, this.cleanCooldownSec - dt);
     if (this.scrapLockSec > 0) this.scrapLockSec = Math.max(0, this.scrapLockSec - dt);
     if (!this.alive) return;
+    if (!this.plugged) return;
 
     let decay = this.passiveDecayPerSec;
     if (this.cleanBuffSec > 0) {
@@ -72,7 +74,7 @@ export class Appliance {
 
   /** Use the appliance (eat/shower). Returns true if it worked. */
   use(): boolean {
-    if (!this.alive) return false;
+    if (!this.alive || !this.plugged) return false;
     this.damage(this.useHpCost);
     return true;
   }
@@ -80,6 +82,14 @@ export class Appliance {
   repair(): void {
     this.alive = true;
     this.hp = this.maxHp * CONFIG.actions.repair.restoreToFraction;
+  }
+
+  unplug(): void {
+    this.plugged = false;
+  }
+
+  plug(): void {
+    this.plugged = true;
   }
 
   clean(): boolean {

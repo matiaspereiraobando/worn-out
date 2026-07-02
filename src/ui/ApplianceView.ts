@@ -2,81 +2,68 @@ import Phaser from "phaser";
 import { CONFIG } from "../config";
 import { Appliance } from "../model/Appliance";
 
-/** Renders one appliance slot (placeholder art via shapes + a little face). */
+/** Renders one appliance as a world object (top-down, proximity-based). */
 export class ApplianceView {
   readonly container: Phaser.GameObjects.Container;
-  private readonly selectRing: Phaser.GameObjects.Rectangle;
+  private readonly scene: Phaser.Scene;
   private readonly body: Phaser.GameObjects.Rectangle;
-  private readonly face: Phaser.GameObjects.Text;
-  private readonly title: Phaser.GameObjects.Text;
+  private readonly sprite?: Phaser.GameObjects.Sprite;
+  private readonly title: Phaser.GameObjects.BitmapText;
   private readonly hpBarBg: Phaser.GameObjects.Rectangle;
   private readonly hpBar: Phaser.GameObjects.Rectangle;
-  private readonly hpText: Phaser.GameObjects.Text;
-  private readonly status: Phaser.GameObjects.Text;
+  private readonly hpText: Phaser.GameObjects.BitmapText;
+  private readonly status: Phaser.GameObjects.BitmapText;
+  private readonly selectionRing: Phaser.GameObjects.Rectangle;
   private blinkT = 0;
 
-  static readonly W = 200;
-  static readonly H = 150;
+  static readonly W = 34;
+  static readonly H = 42;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, label: string) {
+  constructor(scene: Phaser.Scene, x: number, y: number, label: string, spriteKey?: string) {
+    this.scene = scene;
     const W = ApplianceView.W;
     const H = ApplianceView.H;
-
-    this.selectRing = scene.add
-      .rectangle(0, 0, W + 16, H + 16, 0x000000, 0)
-      .setStrokeStyle(3, CONFIG.colors.warn)
-      .setOrigin(0.5)
-      .setVisible(false);
 
     this.body = scene.add
       .rectangle(0, 0, W, H, CONFIG.colors.panel)
       .setStrokeStyle(2, CONFIG.colors.grime)
       .setOrigin(0.5);
-
-    this.face = scene.add
-      .text(0, 4, "•‿•", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "34px",
-        color: "#cfcab0",
-      })
-      .setOrigin(0.5);
+    if (spriteKey && this.scene.textures.exists(spriteKey)) {
+      this.sprite = scene.add.sprite(0, 0, spriteKey, 0).setDisplaySize(24, 36).setOrigin(0.5);
+      this.body.setVisible(false);
+    }
 
     this.title = scene.add
-      .text(0, -H / 2 - 18, label, {
-        fontFamily: "Courier New, monospace",
-        fontSize: "16px",
-        color: "#e8e4d0",
-      })
+      .bitmapText(0, -H / 2 - 16, CONFIG.font.key, label, CONFIG.font.sizeSm)
+      .setTint(CONFIG.colors.text)
       .setOrigin(0.5);
 
     this.hpBarBg = scene.add
-      .rectangle(0, H / 2 + 16, W, 14, CONFIG.colors.panelDark)
+      .rectangle(0, H / 2 + 10, W, 6, CONFIG.colors.panelDark)
       .setStrokeStyle(1, CONFIG.colors.grime)
       .setOrigin(0.5);
     this.hpBar = scene.add
-      .rectangle(-W / 2 + 1, H / 2 + 16, W - 2, 12, CONFIG.colors.hp)
+      .rectangle(-W / 2 + 1, H / 2 + 10, W - 2, 4, CONFIG.colors.hp)
       .setOrigin(0, 0.5);
     this.hpText = scene.add
-      .text(0, H / 2 + 16, "", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "11px",
-        color: "#14140f",
-        fontStyle: "bold",
-      })
+      .bitmapText(0, H / 2 + 10, CONFIG.font.key, "", CONFIG.font.sizeSm)
+      .setTint(0x14140f)
       .setOrigin(0.5);
 
     this.status = scene.add
-      .text(0, H / 2 + 36, "", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "12px",
-        color: "#9a9680",
-      })
+      .bitmapText(0, H / 2 + 20, CONFIG.font.key, "", CONFIG.font.sizeSm)
+      .setTint(CONFIG.colors.textDim)
       .setOrigin(0.5);
 
+    this.selectionRing = scene.add
+      .rectangle(0, 0, W + 8, H + 8, 0, 0)
+      .setStrokeStyle(2, CONFIG.colors.warn)
+      .setVisible(false);
+
     this.container = scene.add.container(x, y, [
-      this.selectRing,
+      this.selectionRing,
       this.body,
-      this.face,
+      ...(this.sprite ? [this.sprite] : []),
       this.title,
       this.hpBarBg,
       this.hpBar,
@@ -85,23 +72,38 @@ export class ApplianceView {
     ]);
   }
 
-  get bodyRect(): Phaser.GameObjects.Rectangle {
-    return this.body;
+  get worldX(): number {
+    return this.container.x;
   }
 
-  setSelected(sel: boolean): void {
-    this.selectRing.setVisible(sel);
+  get worldY(): number {
+    return this.container.y;
+  }
+
+  setInRange(sel: boolean): void {
+    this.selectionRing.setVisible(sel);
   }
 
   update(appliance: Appliance | null, dt: number): void {
     if (!appliance) {
+      if (this.sprite) this.sprite.setVisible(false);
+      this.body.setVisible(true);
       this.body.setFillStyle(CONFIG.colors.panelDark).setAlpha(0.5);
-      this.face.setText("(gone)").setFontSize(16).setAlpha(0.6);
       this.hpBar.setVisible(false);
       this.hpText.setText("");
       this.hpBarBg.setFillStyle(CONFIG.colors.panelDark);
-      this.status.setText("empty slot — Buy New").setColor("#c9b458");
+      this.status.setText("EMPTY");
+      this.status.setTint(CONFIG.colors.money);
       return;
+    }
+
+    if (this.sprite) {
+      this.sprite.setVisible(true);
+      const frame = appliance.visualState === "normal" ? 0 : appliance.visualState === "cracked" ? 1 : 2;
+      this.sprite.setFrame(frame);
+      this.body.setVisible(false);
+    } else {
+      this.body.setVisible(true);
     }
 
     this.hpBar.setVisible(true);
@@ -111,8 +113,6 @@ export class ApplianceView {
 
     let bodyColor: number = CONFIG.colors.panel;
     let barColor: number = CONFIG.colors.hp;
-    let faceStr = "•‿•";
-    this.face.setFontSize(34).setAlpha(1);
 
     switch (appliance.visualState) {
       case "normal":
@@ -120,21 +120,17 @@ export class ApplianceView {
       case "cracked":
         bodyColor = CONFIG.colors.grime;
         barColor = CONFIG.colors.warn;
-        faceStr = "•~•";
         break;
       case "blinking":
         bodyColor = CONFIG.colors.grime;
         barColor = CONFIG.colors.danger;
-        faceStr = "x_x";
         this.blinkT += dt;
         this.body.setAlpha(Math.sin(this.blinkT * 10) > 0 ? 1 : 0.55);
         break;
       case "dead":
         bodyColor = CONFIG.colors.panelDark;
         barColor = CONFIG.colors.panelDark;
-        faceStr = "▪▪";
         this.body.setAlpha(0.6);
-        this.face.setAlpha(0.5);
         break;
     }
     if (appliance.visualState !== "blinking" && appliance.visualState !== "dead") {
@@ -143,16 +139,14 @@ export class ApplianceView {
 
     this.body.setFillStyle(bodyColor);
     this.hpBar.setFillStyle(barColor);
-    this.face.setText(faceStr);
-    this.hpText.setText(`${Math.ceil(appliance.hp)} / ${appliance.maxHp}`);
+    this.hpText.setText(`${Math.ceil(appliance.hp)}`);
 
-    // Status line: cleaning buff, cooldown, scrap lock.
     const bits: string[] = [];
     if (!appliance.alive) bits.push("DEAD");
-    if (appliance.cleanBuffSec > 0) bits.push(`clean ${appliance.cleanBuffSec.toFixed(0)}s`);
-    if (appliance.scrapLockSec > 0) bits.push(`scrap-lock ${appliance.scrapLockSec.toFixed(0)}s`);
-    this.status
-      .setText(bits.join("  ·  "))
-      .setColor(!appliance.alive ? "#d23b2e" : "#9a9680");
+    if (!appliance.plugged) bits.push("UNPLUG");
+    if (appliance.cleanBuffSec > 0) bits.push(`C${appliance.cleanBuffSec.toFixed(0)}s`);
+    if (appliance.scrapLockSec > 0) bits.push(`S${appliance.scrapLockSec.toFixed(0)}s`);
+    this.status.setText(bits.join(" "));
+    this.status.setTint(!appliance.alive ? CONFIG.colors.danger : CONFIG.colors.textDim);
   }
 }

@@ -23,11 +23,16 @@ Zip the **contents** of `dist/` and upload to itch.io as an HTML project (tick "
 
 ## How to play
 
-- **Click a machine** to select it (or press `1` / `2`), then click an action. Keyboard accelerators: `E` use · `R` repair · `L` clean · `C` cannibalize · `B` buy new · `D` unplug.
+- **Move with `WASD`** in the top-down apartment.
+- Press **`E`** near a machine (or the vendor door) to open a contextual action menu.
+- Press **`1-N`** to execute one action from that menu.
+- Press **`P`** to pick up money that's in range.
+- If you move out of appliance range, the action menu closes automatically.
 - Keep **Hunger** and **Hygiene** above 0 by using the fridge (eat) and water heater (shower) — but every use damages the machine.
 - Grab **coins** off the floor to pay the **bill** every 60s. Can't pay → debt. Debt hits $100 → repossessed.
 - When a machine dies: **repair** it (costs Parts), **cannibalize** it for Parts (gone forever), or **buy new** ($35).
-- **Don José** shows up to sell parts and pauses the clock while he's at the door.
+- **Unplug/Plug** is a manual machine action. Unplugged machines are safe from surges and stop decaying, but cannot be used and still count as "off" for stat/bill penalties.
+- **Don José** shows up at the door; interact with him to trade parts while the global timer is paused.
 - You lose when a stat hits 0, debt hits $100, or all critical machines are dead.
 
 ## Tuning
@@ -38,10 +43,13 @@ Every balance number lives in **`src/config.ts`** — one file to retune the who
 
 ```
 src/
+  assets.ts            sprite/font manifest keys and paths
   config.ts            all tunable numbers
+  entities/Player.ts   top-down player movement
   phrases.ts           satirical phrase catalog
   model/Appliance.ts   pure appliance logic (HP, decay, clean, scrap)
-  scenes/GameScene.ts  main loop: economy, events, vendor, HUD
+  scenes/BootScene.ts  preload + fallback textures
+  scenes/GameScene.ts  top-down loop: movement, interaction, economy, events
   scenes/GameOverScene.ts  end screen
-  ui/                  Button, ApplianceView (placeholder shape-art)
+  ui/                  Button, ApplianceView (world object view)
 ```

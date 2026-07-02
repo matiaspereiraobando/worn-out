@@ -18,33 +18,26 @@ export class GameOverScene extends Phaser.Scene {
       y: number,
       str: string,
       size: number,
-      color: string,
-      bold = false,
+      color: number,
+      origin: number = 0.5,
     ) =>
       this.add
-        .text(cx, y, str, {
-          fontFamily: "Courier New, monospace",
-          fontSize: `${size}px`,
-          color,
-          align: "center",
-          fontStyle: bold ? "bold" : "normal",
-          wordWrap: { width: CONFIG.width - 120 },
-          lineSpacing: 6,
-        })
-        .setOrigin(0.5);
+        .bitmapText(cx, y, CONFIG.font.key, str, size)
+        .setTint(color)
+        .setOrigin(origin);
 
-    text(60, "WORN OUT", 34, "#e8e4d0", true);
-    text(104, `"${result.causeText}"`, 18, "#d23b2e");
+    text(20, "WORN OUT", CONFIG.font.sizeLg, c.text);
+    text(38, `"${result.causeText}"`, CONFIG.font.sizeSm, c.danger);
 
-    this.add.rectangle(cx, 140, 520, 2, c.grime).setOrigin(0.5);
-    text(172, `HIGH SCORE: $${result.finalScore.toLocaleString()}`, 26, "#c9b458", true);
+    this.add.rectangle(cx, 58, 280, 1, c.grime).setOrigin(0.5);
+    text(70, `HIGH SCORE: $${result.finalScore.toLocaleString()}`, CONFIG.font.sizeMd, c.money);
     text(
-      212,
+      84,
       `raw $${result.rawScore.toLocaleString()}  ×  ${result.mult}  (${result.archetypeLabel})`,
-      14,
-      "#9a9680",
+      CONFIG.font.sizeSm,
+      c.textDim,
     );
-    this.add.rectangle(cx, 240, 520, 2, c.grime).setOrigin(0.5);
+    this.add.rectangle(cx, 96, 280, 1, c.grime).setOrigin(0.5);
 
     const left =
       `Bills paid:      $${result.billsPaid}\n` +
@@ -58,41 +51,30 @@ export class GameOverScene extends Phaser.Scene {
       `Cleans:       ${result.cleans}\n` +
       `Scrapped:     ${result.scraps}\n` +
       `Bought new:   ${result.buys}\n` +
-      `Unplugs:      ${result.unplugs}\n` +
-      `Failed unplugs: ${result.failedUnplugs}`;
+      `Unplug actions: ${result.unplugActions}\n` +
+      `Surges dodged:  ${result.surgesDodged}\n` +
+      `Surges taken:   ${result.surgesTaken}`;
 
     this.add
-      .text(cx - 230, 268, left, {
-        fontFamily: "Courier New, monospace",
-        fontSize: "14px",
-        color: "#e8e4d0",
-        lineSpacing: 6,
-      })
+      .bitmapText(cx - 146, 108, CONFIG.font.key, left, CONFIG.font.sizeSm)
+      .setTint(c.text)
       .setOrigin(0, 0);
     this.add
-      .text(cx + 20, 268, right, {
-        fontFamily: "Courier New, monospace",
-        fontSize: "14px",
-        color: "#e8e4d0",
-        lineSpacing: 6,
-      })
+      .bitmapText(cx + 14, 108, CONFIG.font.key, right, CONFIG.font.sizeSm)
+      .setTint(c.text)
       .setOrigin(0, 0);
 
-    text(430, `PLAYER TYPE: "${result.archetypeLabel}"`, 16, "#c9b458", true);
-    text(470, PHRASES.manufacturer, 13, "#9a9680");
+    text(250, `PLAYER TYPE: "${result.archetypeLabel}"`, CONFIG.font.sizeSm, c.money);
+    text(266, PHRASES.manufacturer, CONFIG.font.sizeSm, c.textDim);
 
     const btn = this.add
-      .rectangle(cx, 540, 200, 44, c.panel)
+      .rectangle(cx, 326, 120, 22, c.panel)
       .setStrokeStyle(2, c.money)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(cx, 540, "RETRY", {
-        fontFamily: "Courier New, monospace",
-        fontSize: "18px",
-        color: "#e8e4d0",
-        fontStyle: "bold",
-      })
+      .bitmapText(cx, 322, CONFIG.font.key, "RETRY", CONFIG.font.sizeMd)
+      .setTint(c.text)
       .setOrigin(0.5);
     btn.on("pointerover", () => btn.setFillStyle(c.grime));
     btn.on("pointerout", () => btn.setFillStyle(c.panel));
@@ -100,6 +82,6 @@ export class GameOverScene extends Phaser.Scene {
     this.input.keyboard?.once("keydown-SPACE", () => this.scene.start("game"));
     this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("game"));
 
-    text(578, "[ click RETRY or press SPACE ]", 11, "#6b6858");
+    text(346, "[ click RETRY or press SPACE ]", CONFIG.font.sizeSm, c.textDim);
   }
 }

@@ -18,7 +18,8 @@ This version reflects decisions made when the slice was implemented. Key changes
 - **Stat decay retuned to per-second** so stats are the real clock that forces you to use appliances (v2's `−2/30s` made stats cosmetic). See §4.
 - **Parts simplified to a single resource** — no specific/generic/universal tiers, no separate "tools" resource for the slice. See §6–§7. (Tiered parts return as a v2 stretch.)
 - **Anti-arbitrage rule added:** a freshly bought appliance can't be scrapped for a lock period, so you can't farm buy→scrap for parts. See §6/§7.
-- **Input is mouse-first** (click a machine to select, click an action) with keyboard accelerators. See §6.
+- **Input reworked to top-down movement:** WASD movement, `E` contextual interact, `1-N` action selection, `P` pickup. Action menu appears only in range. See §6.
+- **Pixel rendering hardened:** bitmap pixel font + anti-alias disabled + rounded pixel scaling.
 - **Clean now costs money** (`$5`) instead of a rag item (inventory simplification). See §8.
 - **All balance numbers live in one `src/config.ts`** so the whole game retunes in one place.
 - **Vertical-slice scope** for the first build: 2 appliances (fridge, water heater) + 2 stats (hunger, hygiene). Stove/mood and washing machine are deferred. See §19.
@@ -133,20 +134,24 @@ All values live in `src/config.ts` (`stats.*`).
 
 ## 6. Player actions
 
-**Input is mouse-first (v3):** click a machine to select it, then click an action button. Keyboard shortcuts are accelerators, not the primary input (better for itch/mouse players, and it removes the "which appliance is the key acting on?" ambiguity).
+**Input model (top-down v4):**
+
+- `WASD` = move player
+- `E` = interact with nearest machine/door in range
+- `1-N` = choose action from the opened contextual menu
+- `P` = pick up money in range
+- If player exits interaction range, the action menu closes automatically.
 
 **Parts is a single resource (v3):** no specific/generic/universal tiers and no separate "tools" resource for the slice — repair just costs Parts. (The tiered economy is a documented v2 stretch.)
 
-| Action | Key | Cost | Result |
+| Action | Trigger | Cost | Result |
 |---|---|---|---|
-| **Use** (contextual) | `E` | Appliance HP (fixed chunk) | +stat, −appliance HP |
-| **Repair** | `R` | 1 Part | HP restored to 90% (also revives a dead machine) |
-| **Cannibalize** | `C` | Appliance lost forever | Parts based on HP at scrap (see §7); blocked while scrap-locked |
-| **Buy new** | `B` | $35 | Full HP appliance, shady; 25s scrap-lock (anti-arbitrage) |
-| **Clean** (maintenance) | `L` | $5 | HP +10%, decay rate ×0.7 for 10s, 8s cooldown |
-| **Unplug** (mitigation) | `D` | during warning | Prevents power-surge damage |
-
-Selection keys: `1` = fridge, `2` = water heater.
+| **Use** (eat/shower) | `E` menu → number | Appliance HP (fixed chunk) | +stat, −appliance HP |
+| **Repair** | `E` menu → number | 1 Part | HP restored to 90% (also revives a dead machine) |
+| **Clean** | `E` menu → number | $5 | HP +10, decay rate ×0.7 for 10s, 8s cooldown |
+| **Unplug / Plug** | `E` menu → number | free | Manual toggle only; no auto re-plug |
+| **Cannibalize** | `E` menu → number | Appliance lost forever | Parts based on HP at scrap (see §7); blocked while scrap-locked |
+| **Buy new** | `E` on empty slot → number | $35 | Full HP appliance, shady; 25s scrap-lock (anti-arbitrage) |
 
 ---
 
@@ -186,7 +191,7 @@ One action only: **Clean**.
 
 | Event | Warning | Effect | Mitigable |
 |---|---|---|---|
-| **Power surge** | 8s | 1 random appliance −25% HP | Unplug (`D`) during warning |
+| **Power surge** | 8s | 1 random appliance −25% HP | Manually unplug target machine before timer ends |
 | **Price hike** | 12s | Next bill × 1.5 | Not mitigable in slice (still telegraphed); prepaid item is post-slice |
 
 **Rules:**
@@ -201,8 +206,9 @@ One action only: **Clean**.
 ## 10. Vendor: Don José
 
 - **Frequency:** every 60-90s (random)
-- **Warning:** 15-20s in advance ("🔔 Doorbell in 18s — 'Don José Repairs'")
-- **Pauses the global timer** while at the door (10-15s of intentional breathing room)
+- **Warning:** 12s in advance
+- **Interaction:** when active, approach the door and press `E` to open Don José's menu
+- **Pauses the global timer** only while you're in the door trade menu
 - **Inventory:** 4-5 items
 - **If you don't open in 10s, he leaves**
 
@@ -223,7 +229,7 @@ One action only: **Clean**.
 
 ## 11. Side-tasks
 
-- **Passive pickups (in slice):** 5 coins on the floor at a time, click to grab, +$3-7 each, respawn every 6-12s. This is the main income that funds repairs and bills.
+- **Passive pickups (in slice):** 5 coins on the floor at a time, press `P` near them to collect, +$3-7 each, respawn every 6-12s. This is the main income that funds repairs and bills.
 - **Washing machine mini-cycle (post-slice):** an 8s cycle with a timing mini-challenge. +$15 on success. Ships with the washing machine after the slice.
 
 ---

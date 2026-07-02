@@ -5,7 +5,7 @@ import { CONFIG } from "../config";
 export class Button {
   readonly container: Phaser.GameObjects.Container;
   private readonly bg: Phaser.GameObjects.Rectangle;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly label: Phaser.GameObjects.BitmapText;
   private enabled = true;
   private onClick: () => void;
 
@@ -24,12 +24,8 @@ export class Button {
       .setStrokeStyle(1, CONFIG.colors.grime)
       .setOrigin(0.5);
     this.label = scene.add
-      .text(0, 0, text, {
-        fontFamily: "Courier New, monospace",
-        fontSize: "13px",
-        color: "#e8e4d0",
-        align: "center",
-      })
+      .bitmapText(0, 0, CONFIG.font.key, text, CONFIG.font.sizeSm)
+      .setTint(CONFIG.colors.text)
       .setOrigin(0.5);
 
     this.container = scene.add.container(x, y, [this.bg, this.label]);
@@ -48,7 +44,7 @@ export class Button {
 
   setEnabled(enabled: boolean): this {
     this.enabled = enabled;
-    this.label.setColor(enabled ? "#e8e4d0" : "#6b6858");
+    this.label.setTint(enabled ? CONFIG.colors.text : 0x6b6858);
     this.bg.setFillStyle(CONFIG.colors.panelDark);
     return this;
   }

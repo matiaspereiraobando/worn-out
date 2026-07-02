@@ -11,8 +11,8 @@
 
 export const CONFIG = {
   /** Logical game resolution. Scaled to fit the window. */
-  width: 960,
-  height: 600,
+  width: 640,
+  height: 360,
 
   /** Oppressive kitchen-grunge palette (GDD §17). Hex ints for Phaser. */
   colors: {
@@ -97,7 +97,7 @@ export const CONFIG = {
       partsCost: 1,
       moneyCost: 0,
       restoreToFraction: 0.9, // repairs to 90% HP
-      key: "R",
+      key: "DIGIT2",
     },
     clean: {
       moneyCost: 5,
@@ -105,10 +105,10 @@ export const CONFIG = {
       decayReductionFactor: 0.7, // decay ×0.7 ...
       decayReductionSec: 10, // ... for 10s
       cooldownSec: 8,
-      key: "L",
+      key: "DIGIT3",
     },
     cannibalize: {
-      key: "C",
+      key: "DIGIT5",
       // Parts yielded by HP at scrap (single resource, GDD §7 simplified).
       curve: [
         { minHpFraction: 0.7, parts: 3 },
@@ -118,14 +118,17 @@ export const CONFIG = {
       ],
     },
     buyNew: {
-      key: "B",
+      key: "DIGIT1",
       price: 35,
       // Anti-arbitrage (GDD concern #4): a freshly bought machine cannot be
       // scrapped for this many seconds, so you can't farm buy->scrap for parts.
       scrapLockSec: 25,
     },
     use: {
-      key: "E",
+      key: "DIGIT1",
+    },
+    togglePlug: {
+      key: "DIGIT4",
     },
   },
 
@@ -136,6 +139,7 @@ export const CONFIG = {
     maxValue: 7,
     respawnMinSec: 6,
     respawnMaxSec: 12,
+    collectRange: 34,
   },
 
   /**
@@ -158,7 +162,6 @@ export const CONFIG = {
     powerSurge: {
       warningSec: 8,
       hpLossFraction: 0.25, // -25% HP to a random appliance
-      mitigateKey: "D", // "unplug" during the warning
     },
     priceHike: {
       warningSec: 12,
@@ -202,6 +205,30 @@ export const CONFIG = {
 
   /** Target for a satisfying run (GDD concern #7): aim ~2-4 min with a crisis. */
   targetRunSeconds: 180,
+
+  player: {
+    speed: 88,
+    w: 14,
+    h: 14,
+  },
+
+  world: {
+    hudHeight: 58,
+    floorTop: 70,
+    floorBottom: 344,
+  },
+
+  interaction: {
+    applianceRange: 52,
+    doorRange: 42,
+  },
+
+  font: {
+    key: "arcade",
+    sizeSm: 8,
+    sizeMd: 10,
+    sizeLg: 16,
+  },
 } as const;
 
 export type StatKey = "hunger" | "hygiene";
