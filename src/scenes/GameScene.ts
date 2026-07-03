@@ -218,6 +218,7 @@ export class GameScene extends Phaser.Scene {
     this.nextVendorIn = Phaser.Math.Between(CONFIG.vendor.minIntervalSec, CONFIG.vendor.maxIntervalSec);
     this.nextBillMultiplier = 1;
     this.activeEvent = null;
+    this.clearAllSurgeWarnings();
     this.vendorState = "idle";
     this.vendorTimer = 0;
     this.interactionPaused = false;
@@ -1169,7 +1170,10 @@ export class GameScene extends Phaser.Scene {
     if (this.activeEvent) {
       this.activeEvent.warningLeft -= dt;
       if (this.activeEvent.warningLeft <= 0) this.resolveEvent();
-      else this.updateEventBanner();
+      else {
+        this.updateEventBanner();
+        this.updateSurgeWarnings();
+      }
       return;
     }
     this.nextEventIn -= dt;
@@ -1193,6 +1197,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.eventBanner.setVisible(true);
     this.updateEventBanner();
+    this.updateSurgeWarnings();
   }
 
   private updateEventBanner(): void {
@@ -1213,7 +1218,29 @@ export class GameScene extends Phaser.Scene {
       this.surgeIcon?.setVisible(false);
       this.eventText.setText(`PRICE HIKE ${t}s`);
       this.vendorText.setText(`Next bill x${CONFIG.events.priceHike.billMultiplier}`);
+      this.clearAllSurgeWarnings();
     }
+  }
+
+  /** World-space telegraph: only the surge target pulses; urgency ramps in the last 2s. */
+  private updateSurgeWarnings(): void {
+    if (!this.views) return;
+    const ev = this.activeEvent;
+    if (!ev || ev.type !== "surge" || !ev.targetKey) {
+      this.clearAllSurgeWarnings();
+      return;
+    }
+    const left = Math.max(0, ev.warningLeft);
+    // Urgency 0 until the last 2s, then ramps 0→1.
+    const urgency = left <= 2 ? 1 - left / 2 : 0;
+    for (const key of this.order) {
+      this.views[key].setSurgeWarning(key === ev.targetKey, urgency);
+    }
+  }
+
+  private clearAllSurgeWarnings(): void {
+    if (!this.views) return;
+    for (const key of this.order) this.views[key].setSurgeWarning(false);
   }
 
   private resolveEvent(): void {
@@ -1221,6 +1248,9 @@ export class GameScene extends Phaser.Scene {
     if (!ev) return;
     if (ev.type === "surge") {
       const target = ev.targetKey ? this.appliances[ev.targetKey] : null;
+      const view = ev.targetKey ? this.views[ev.targetKey] : null;
+      const hitMachine = !!(target?.plugged && target.alive);
+      view?.playSurgeDischarge(hitMachine);
       if (target && !target.plugged) {
         this.surgesDodged++;
         this.log(PHRASES.onSurgeMitigated);
@@ -1229,6 +1259,7 @@ export class GameScene extends Phaser.Scene {
         this.surgesTaken++;
         this.log(PHRASES.onSurgeHit);
       }
+      this.clearAllSurgeWarnings();
     } else {
       this.nextBillMultiplier *= CONFIG.events.priceHike.billMultiplier;
     }
