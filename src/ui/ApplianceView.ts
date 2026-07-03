@@ -4,6 +4,8 @@ import { CONFIG } from "../config";
 import { Appliance } from "../model/Appliance";
 
 const SPARK_TEX = "px-spark";
+/** Above HUD (50-51) and event banner (55); below menus (1000). */
+const FX_DEPTH = 60;
 
 /** Renders one appliance as a world object (top-down, proximity-based). */
 export class ApplianceView {
@@ -76,10 +78,12 @@ export class ApplianceView {
         .sprite(ApplianceView.PLUG_OX, ApplianceView.PLUG_OY, ASSETS.sprites.icons.key, 4)
         .setDisplaySize(32, 32)
         .setVisible(false);
+      // World-space (not in container) so it can sit above the HUD / event banner.
       this.surgeIcon = scene.add
-        .sprite(0, ApplianceView.SURGE_ICON_Y, ASSETS.sprites.icons.key, 6)
+        .sprite(x, y + ApplianceView.SURGE_ICON_Y, ASSETS.sprites.icons.key, 6)
         .setDisplaySize(28, 28)
         .setOrigin(0.5)
+        .setDepth(FX_DEPTH)
         .setVisible(false);
     }
 
@@ -98,7 +102,6 @@ export class ApplianceView {
       this.hpText,
       this.status,
       ...(this.plugIcon ? [this.plugIcon] : []),
-      ...(this.surgeIcon ? [this.surgeIcon] : []),
     ]);
   }
 
@@ -120,7 +123,11 @@ export class ApplianceView {
     this.surgeUrgency = Phaser.Math.Clamp(urgency, 0, 1);
     if (!active) {
       this.surgePulseT = 0;
-      this.surgeIcon?.setVisible(false).setAlpha(1).setY(ApplianceView.SURGE_ICON_Y).setScale(1);
+      this.surgeIcon
+        ?.setVisible(false)
+        .setAlpha(1)
+        .setScale(1)
+        .setPosition(this.restX, this.restY + ApplianceView.SURGE_ICON_Y);
       this.plugIcon?.clearTint().setScale(1).setAlpha(1);
       // Keep damage-flash tint if a discharge is in progress.
       if (this.damageFlashT <= 0) this.sprite?.clearTint();
@@ -241,7 +248,7 @@ export class ApplianceView {
 
     if (this.surgeIcon) {
       this.surgeIcon.setVisible(true);
-      this.surgeIcon.setY(ApplianceView.SURGE_ICON_Y - wave * 4);
+      this.surgeIcon.setPosition(this.restX, this.restY + ApplianceView.SURGE_ICON_Y - wave * 4);
       this.surgeIcon.setAlpha(0.55 + wave * 0.45);
       this.surgeIcon.setScale(0.9 + wave * 0.2);
     }
@@ -317,7 +324,7 @@ export class ApplianceView {
       tint: [CONFIG.colors.lamp, CONFIG.colors.warn, CONFIG.colors.text, CONFIG.colors.danger],
       emitting: false,
     });
-    particles.setDepth(60);
+    particles.setDepth(FX_DEPTH);
     particles.explode(count);
     this.scene.time.delayedCall(450, () => {
       if (particles.active) particles.destroy();

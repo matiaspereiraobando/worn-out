@@ -439,26 +439,28 @@ export class GameScene extends Phaser.Scene {
     let vendorTex = "fallback-vendor";
     let vendorW = 32;
     let vendorH = 32;
-    let flipX = false;
-    let vendorFrame: number | undefined;
     if (hasVendor) {
       vendorTex = ASSETS.sprites.vendor.key;
       vendorW = 64 * CONFIG.vendor.spriteScale;
       vendorH = 64 * CONFIG.vendor.spriteScale;
-      vendorFrame = 0; // Sheet order S,N,W,E -> south into the room (door on left wall).
-      flipX = false;
+      const animKey = "vendor-idle";
+      if (!this.anims.exists(animKey)) {
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(vendorTex, { start: 0, end: 6 }),
+          frameRate: CONFIG.vendor.animFps,
+          repeat: -1,
+        });
+      }
     } else if (hasCart) {
       vendorTex = ASSETS.sprites.cart.key;
       vendorW = 32;
       vendorH = 32;
-      // Source cart faces right; keep it facing into the room from the left-wall door.
-      flipX = false;
     }
     this.vendorNpc = this.add
-      .sprite(this.doorPos.x, this.doorPos.y + CONFIG.layout.door.vendorOffsetY, vendorTex, vendorFrame)
+      .sprite(this.doorPos.x, this.doorPos.y + CONFIG.layout.door.vendorOffsetY, vendorTex)
       .setVisible(false)
-      .setDisplaySize(vendorW, vendorH)
-      .setFlipX(flipX);
+      .setDisplaySize(vendorW, vendorH);
   }
 
   private buildPlayer(): void {
@@ -620,11 +622,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Arcade font has no `$`; floats use outlined `+N` above the player. */
+  /** Arcade font has no `$`; floats use outlined `+N` (gold) or `-N` (danger). */
   private spawnMoneyFloat(x: number, y: number, amount: number): void {
-    const label = `+${amount}`;
+    if (amount === 0) return;
+    const spend = amount < 0;
+    const label = spend ? `-${Math.abs(amount)}` : `+${amount}`;
     const startY = y - 8;
-    const fill = CONFIG.colors.money;
+    const fill = spend ? CONFIG.colors.danger : CONFIG.colors.money;
     const outline = 0x0a0a08;
     const children: Phaser.GameObjects.GameObject[] = [];
     const size = CONFIG.font.sizeLg;
@@ -939,6 +943,8 @@ export class GameScene extends Phaser.Scene {
     if (pressed && inZone) {
       this.money += w.reward;
       this.washes++;
+      const washer = this.views.washer;
+      this.spawnMoneyFloat(washer.worldX, washer.worldY - 20, w.reward);
       this.log(PHRASES.onWashSuccess);
       this.refreshHud();
     } else {
@@ -974,7 +980,10 @@ export class GameScene extends Phaser.Scene {
       this.log("Still on cleaning cooldown.");
       return;
     }
-    this.money -= CONFIG.actions.clean.moneyCost;
+    const cost = CONFIG.actions.clean.moneyCost;
+    this.money -= cost;
+    const view = this.views[key];
+    this.spawnMoneyFloat(view.worldX, view.worldY - 20, -cost);
     this.cleans++;
     this.log(a.alive ? PHRASES.onClean : PHRASES.onCleanDead);
   }
@@ -1019,6 +1028,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.money -= price;
+    const view = this.views[key];
+    this.spawnMoneyFloat(view.worldX, view.worldY - 20, -price);
     const fresh = new Appliance(key);
     fresh.scrapLockSec = CONFIG.actions.buyNew.scrapLockSec;
     this.appliances[key] = fresh;
@@ -1030,8 +1041,10 @@ export class GameScene extends Phaser.Scene {
   private buyFromVendor(): void {
     if (this.vendorState !== "open") return;
     if (this.money < CONFIG.vendor.partsPrice) return;
-    this.money -= CONFIG.vendor.partsPrice;
+    const cost = CONFIG.vendor.partsPrice;
+    this.money -= cost;
     this.parts += CONFIG.vendor.partsBundle;
+    this.spawnMoneyFloat(this.doorPos.x, this.doorPos.y - 20, -cost);
     this.log(PHRASES.onVendorBuy);
   }
 
@@ -1100,6 +1113,9 @@ export class GameScene extends Phaser.Scene {
       this.money = 0;
       this.debt += shortfall;
       this.log(PHRASES.onBill(bill.total) + " " + PHRASES.onDebt);
+    }
+    if (paid > 0) {
+      this.spawnMoneyFloat(this.player.sprite.x, this.player.sprite.y - 20, -paid);
     }
     this.closeMenu();
     this.showBillReceipt(bill, paid, shortfall);
@@ -1290,6 +1306,11 @@ export class GameScene extends Phaser.Scene {
       if (this.vendorTimer <= 0) {
         this.vendorState = "open";
         this.vendorTimer = CONFIG.vendor.stayOpenSec;
+        this.vendorNpc.setVisible(true);
+        if (this.anims.exists("vendor-idle")) {
+          this.vendorNpc.anims.play("vendor-idle");
+        }
+        this.playVendorDoorFx();
       }
     } else if (this.vendorState === "open") {
       if (!this.interactionPaused) this.vendorTimer -= dtReal;
@@ -1307,10 +1328,51 @@ export class GameScene extends Phaser.Scene {
 
   private closeVendor(): void {
     this.vendorState = "idle";
+    this.vendorNpc.anims.stop();
     this.vendorNpc.setVisible(false);
+    this.playVendorDoorFx();
     if (this.menuMode === "vendor") this.closeMenu();
     this.nextVendorIn = Phaser.Math.Between(CONFIG.vendor.minIntervalSec, CONFIG.vendor.maxIntervalSec);
     if (!this.activeEvent) this.eventBanner.setVisible(false);
+  }
+
+  /**
+   * Warm lamp/mustard motes at the door — arrival and leave both read as a slam.
+   * Surge FX uses rust/danger and falls; this uses gold/lamp and drifts upward.
+   */
+  private playVendorDoorFx(): void {
+    const key = "px-spark";
+    if (!this.textures.exists(key)) {
+      const g = this.make.graphics({ x: 0, y: 0 });
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(0, 0, 2, 2);
+      g.generateTexture(key, 2, 2);
+      g.destroy();
+    }
+    const x = this.doorPos.x;
+    const y = this.doorPos.y;
+    const depth = 60;
+    const burst = (ox: number, oy: number, count: number, angleMin: number, angleMax: number) => {
+      const particles = this.add.particles(x + ox, y + oy, key, {
+        speed: { min: 24, max: 70 },
+        angle: { min: angleMin, max: angleMax },
+        scale: { start: 2.2, end: 0 },
+        alpha: { start: 0.95, end: 0 },
+        lifespan: { min: 450, max: 800 },
+        gravityY: -50,
+        tint: [CONFIG.colors.lamp, CONFIG.colors.money, CONFIG.colors.warn, CONFIG.colors.text],
+        emitting: false,
+      });
+      particles.setDepth(depth);
+      particles.explode(count);
+      this.time.delayedCall(900, () => {
+        if (particles.active) particles.destroy();
+      });
+    };
+    // Soft halo around the door, mostly rising into the room.
+    burst(0, 0, 22, 220, 320);
+    burst(-18, 8, 12, 200, 280);
+    burst(18, 8, 12, 260, 340);
   }
 
   private refreshHud(): void {

@@ -209,6 +209,8 @@ export const CONFIG = {
     partsPrice: 6,
     partsBundle: 2,
     spriteScale: 2,
+    /** Idle loop on the south-facing anim sheet (7 frames). */
+    animFps: 8,
   },
 
   /** Starting resources. */
