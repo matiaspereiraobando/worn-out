@@ -50,6 +50,7 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
+    this.load.image(ASSETS.sprites.billPaper.key, ASSETS.sprites.billPaper.path);
   }
 
   create(): void {
@@ -61,6 +62,7 @@ export class BootScene extends Phaser.Scene {
     this.makeFallback("fallback-door", 24, 30, 0x564531, CONFIG.colors.grime);
     this.makeFallback("fallback-vendor", 24, 30, 0x7f8ba6, CONFIG.colors.grime);
     this.makeFallback("fallback-coin", 10, 10, CONFIG.colors.money, 0x8a7a2e);
+    this.makeFallback("fallback-bill-paper", 200, 280, 0xe8dcc8, CONFIG.colors.grime);
 
     this.scene.start("game");
   }

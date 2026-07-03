@@ -21,7 +21,7 @@ export const PHRASES = {
   onBuyNew: "You did it! A brand new machine. Same model. Same problems.",
   onWashSuccess: "Spin cycle nailed. $15 and a warm hum of compliance.",
   onWashFail: "Off-balance. The drum shudders; no payout today.",
-  onBill: (amount: number) => `Bill of the day: $${amount}. Pay up, or...`,
+  onBill: (amount: number) => `Bill of the day: ${amount}. Pay up, or...`,
   onDebt: "You couldn't cover it. The difference is now debt. It compounds, spiritually.",
   gameOver: {
     hunger: "You died of hunger. The system won.",

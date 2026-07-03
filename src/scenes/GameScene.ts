@@ -56,6 +56,18 @@ interface ActiveEvent {
   targetKey?: ApplianceKey;
 }
 
+interface BillBreakdown {
+  rent: number;
+  electricity: number;
+  water: number;
+  food: number;
+  fridgeBroken: boolean;
+  heaterBroken: boolean;
+  multiplier: number;
+  subtotal: number;
+  total: number;
+}
+
 export class GameScene extends Phaser.Scene {
   private readonly order: ApplianceKey[] = ["fridge", "heater", "washer"];
   private readonly appliancePos: Record<ApplianceKey, { x: number; y: number }> = CONFIG.layout.appliances;
@@ -101,16 +113,22 @@ export class GameScene extends Phaser.Scene {
   private vendorTimer = 0;
   private gameEnded = false;
   private interactionPaused = false;
+  private receiptOpen = false;
+  private receiptCloseLeft = 0;
   private pickups: Pickup[] = [];
 
   private hungerBar!: Phaser.GameObjects.Rectangle;
   private hygieneBar!: Phaser.GameObjects.Rectangle;
+  private debtBar!: Phaser.GameObjects.Rectangle;
   private hungerText!: Phaser.GameObjects.BitmapText;
   private hygieneText!: Phaser.GameObjects.BitmapText;
+  private debtText!: Phaser.GameObjects.BitmapText;
   private moneyText!: Phaser.GameObjects.BitmapText;
   private partsText!: Phaser.GameObjects.BitmapText;
-  private hudText!: Phaser.GameObjects.BitmapText;
   private dayText!: Phaser.GameObjects.BitmapText;
+  private receiptUI!: Phaser.GameObjects.Container;
+  private receiptBodyText!: Phaser.GameObjects.BitmapText;
+  private receiptCloseText!: Phaser.GameObjects.BitmapText;
   private logText!: Phaser.GameObjects.BitmapText;
   private eventBanner!: Phaser.GameObjects.Container;
   private eventText!: Phaser.GameObjects.BitmapText;
@@ -141,6 +159,7 @@ export class GameScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keyE!: Phaser.Input.Keyboard.Key;
   private keyR!: Phaser.Input.Keyboard.Key;
+  private keyX!: Phaser.Input.Keyboard.Key;
   private keyNums: Phaser.Input.Keyboard.Key[] = [];
 
   constructor() {
@@ -158,6 +177,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setWalkable((x, y) => this.canPlayerStandAt(x, y));
     this.buildActionMenu();
     this.buildWashUI();
+    this.buildBillReceipt();
     this.buildEventBanner();
     this.buildLog();
     this.buildPickups();
@@ -190,6 +210,8 @@ export class GameScene extends Phaser.Scene {
     this.vendorState = "idle";
     this.vendorTimer = 0;
     this.interactionPaused = false;
+    this.receiptOpen = false;
+    this.receiptCloseLeft = 0;
     this.gameEnded = false;
     this.pickups = [];
     this.nearestAppliance = null;
@@ -229,15 +251,16 @@ export class GameScene extends Phaser.Scene {
     const c = CONFIG.colors;
     const hasIcons = this.textures.exists(ASSETS.sprites.icons.key);
     const barW = CONFIG.hud.barW;
+    const debtBarW = CONFIG.hud.debtBarW;
     const midY = CONFIG.world.hudHeight / 2;
     const depth = 51;
-    const mkBar = (x: number) => {
+    const mkBar = (x: number, width: number = barW) => {
       this.add
-        .rectangle(x, midY, barW, 8, c.panelDark)
+        .rectangle(x, midY, width, 8, c.panelDark)
         .setStrokeStyle(1, c.grime)
         .setOrigin(0, 0.5)
         .setDepth(depth);
-      return this.add.rectangle(x + 1, midY, barW - 2, 4, c.ok).setOrigin(0, 0.5).setDepth(depth);
+      return this.add.rectangle(x + 1, midY, width - 2, 4, c.ok).setOrigin(0, 0.5).setDepth(depth);
     };
     // Value sits beside the icon (not on the fill) so it stays readable as the bar color shifts.
     const mkStatValue = (x: number) =>
@@ -257,10 +280,35 @@ export class GameScene extends Phaser.Scene {
     this.hungerBar = mkBar(72);
     this.hygieneText = mkStatValue(218);
     this.hygieneBar = mkBar(248);
+    // Money icon already present; bare amount (arcade font has no `$` glyph).
     this.moneyText = this.bt(396, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.money).setDepth(depth);
     this.partsText = this.bt(496, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
-    this.hudText = this.bt(560, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.textDim).setDepth(depth);
+    this.debtText = mkStatValue(540);
+    this.debtBar = mkBar(570, debtBarW);
     this.dayText = this.bt(952, midY, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(c.money).setDepth(depth);
+  }
+
+  private buildBillReceipt(): void {
+    const paperKey = this.textures.exists(ASSETS.sprites.billPaper.key)
+      ? ASSETS.sprites.billPaper.key
+      : "fallback-bill-paper";
+    const paper = this.add.image(0, 0, paperKey).setOrigin(0.5);
+    if (paperKey === "fallback-bill-paper") {
+      paper.setDisplaySize(200, 280);
+    }
+    // Dark ink on bone paper — bone text was unreadable on the receipt background.
+    const ink = CONFIG.colors.bg;
+    const inkDim = CONFIG.colors.panel;
+    const title = this.bt(0, -110, "DAILY BILL", CONFIG.font.sizeMd).setOrigin(0.5).setTint(ink);
+    this.receiptBodyText = this.bt(0, -70, "", CONFIG.font.sizeSm)
+      .setOrigin(0.5, 0)
+      .setTint(ink)
+      .setCenterAlign();
+    this.receiptCloseText = this.bt(0, 118, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    this.receiptUI = this.add
+      .container(CONFIG.width / 2, CONFIG.height / 2, [paper, title, this.receiptBodyText, this.receiptCloseText])
+      .setVisible(false)
+      .setDepth(1200);
   }
 
   private buildAppliances(): void {
@@ -342,6 +390,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildActionMenu(): void {
+    // Scene instances are reused across retries; drop stale Button wrappers whose
+    // BitmapTexts were destroyed on shutdown (fontData becomes null → setText crash).
+    this.menuButtons = [];
     const bg = this.add
       .rectangle(0, 0, 200, 120, CONFIG.colors.panelDark)
       .setStrokeStyle(2, CONFIG.colors.warn)
@@ -413,6 +464,7 @@ export class GameScene extends Phaser.Scene {
     this.cursors = kb.createCursorKeys();
     this.keyE = kb.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.keyR = kb.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.keyX = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
     this.keyNums = [
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
@@ -446,13 +498,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private collectPickupsInRange(): void {
-    if (this.gameEnded || this.interactionPaused) return;
+    if (this.gameEnded || this.interactionPaused || this.receiptOpen) return;
     let got = 0;
+    let floatX = this.player.sprite.x;
+    let floatY = this.player.sprite.y;
     for (const p of this.pickups) {
       if (!p.active) continue;
       const d = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, p.sprite.x, p.sprite.y);
       if (d <= CONFIG.pickups.collectRange) {
         got += p.value;
+        floatX = p.sprite.x;
+        floatY = p.sprite.y;
         p.active = false;
         p.sprite.setVisible(false);
         p.label.setVisible(false);
@@ -461,15 +517,54 @@ export class GameScene extends Phaser.Scene {
     }
     if (got > 0) {
       this.money += got;
-      this.log(`Picked up $${got}`);
+      this.spawnMoneyFloat(floatX, floatY, got);
+      this.log(`Picked up +${got}`);
       this.refreshHud();
     }
+  }
+
+  /** Arcade font has no `$`; floats use outlined `+N` above the player. */
+  private spawnMoneyFloat(x: number, y: number, amount: number): void {
+    const label = `+${amount}`;
+    const startY = y - 8;
+    const fill = CONFIG.colors.money;
+    const outline = 0x0a0a08;
+    const children: Phaser.GameObjects.GameObject[] = [];
+    const size = CONFIG.font.sizeLg;
+    for (const [ox, oy] of [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ] as const) {
+      children.push(this.bt(ox, oy, label, size).setOrigin(0.5).setTint(outline));
+    }
+    children.push(this.bt(0, 0, label, size).setOrigin(0.5).setTint(fill));
+    const float = this.add.container(x, startY, children).setDepth(1500);
+    this.tweens.add({
+      targets: float,
+      y: startY - CONFIG.pickups.floatRisePx,
+      alpha: 0,
+      duration: CONFIG.pickups.floatDurationMs,
+      ease: "Quad.easeOut",
+      onComplete: () => float.destroy(true),
+    });
   }
 
   update(_time: number, deltaMs: number): void {
     if (this.gameEnded) return;
 
     const dtReal = deltaMs / 1000;
+    if (this.receiptOpen) {
+      this.tickReceipt(dtReal);
+      this.refreshHud();
+      return;
+    }
+
     this.handleInput(dtReal);
     if (this.washing) this.tickWash(dtReal);
     this.tickVendor(dtReal);
@@ -875,30 +970,87 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private chargeBill(): void {
+  private computeBillBreakdown(): BillBreakdown {
     const b = CONFIG.bills;
     const fridgeBroken = !this.appliances.fridge?.alive || !this.appliances.fridge?.plugged;
     const heaterBroken = !this.appliances.heater?.alive || !this.appliances.heater?.plugged;
-    let total: number = b.rent;
-    total += b.electricity;
-    total += heaterBroken ? Math.round(b.water * b.brokenMultiplier) : b.water;
-    total += fridgeBroken ? Math.round(b.food * b.brokenMultiplier) : b.food;
-    total = Math.round(total * this.nextBillMultiplier);
+    const rent = b.rent;
+    const electricity = b.electricity;
+    const water = heaterBroken ? Math.round(b.water * b.brokenMultiplier) : b.water;
+    const food = fridgeBroken ? Math.round(b.food * b.brokenMultiplier) : b.food;
+    const subtotal = rent + electricity + water + food;
+    const multiplier = this.nextBillMultiplier;
+    const total = Math.round(subtotal * multiplier);
+    return { rent, electricity, water, food, fridgeBroken, heaterBroken, multiplier, subtotal, total };
+  }
+
+  private chargeBill(): void {
+    const bill = this.computeBillBreakdown();
     this.nextBillMultiplier = 1;
     this.days++;
 
-    if (this.money >= total) {
-      this.money -= total;
-      this.billsPaid += total;
-      this.log(PHRASES.onBill(total));
+    let paid = 0;
+    let shortfall = 0;
+    if (this.money >= bill.total) {
+      this.money -= bill.total;
+      this.billsPaid += bill.total;
+      paid = bill.total;
+      this.log(PHRASES.onBill(bill.total));
     } else {
-      const shortfall = total - this.money;
+      shortfall = bill.total - this.money;
+      paid = this.money;
       this.billsPaid += this.money;
       this.money = 0;
       this.debt += shortfall;
-      this.log(PHRASES.onBill(total) + " " + PHRASES.onDebt);
+      this.log(PHRASES.onBill(bill.total) + " " + PHRASES.onDebt);
     }
+    this.closeMenu();
+    this.showBillReceipt(bill, paid, shortfall);
     this.flashBills();
+  }
+
+  private showBillReceipt(bill: BillBreakdown, paid: number, shortfall: number): void {
+    const waterTag = bill.heaterBroken ? " !" : "";
+    const foodTag = bill.fridgeBroken ? " !" : "";
+    const hikeLine = bill.multiplier > 1 ? `\nHIKE x${bill.multiplier}` : "";
+    const debtLine = shortfall > 0 ? `\nDEBT +${shortfall}` : "";
+    // Bare amounts: arcade font has no `$` glyph.
+    this.receiptBodyText.setText(
+      `RENT ${bill.rent}\n` +
+        `ELEC ${bill.electricity}\n` +
+        `WATER ${bill.water}${waterTag}\n` +
+        `FOOD ${bill.food}${foodTag}` +
+        hikeLine +
+        `\nTOTAL ${bill.total}\n` +
+        `PAID ${paid}` +
+        debtLine,
+    );
+    this.receiptCloseLeft = CONFIG.bills.receiptSec;
+    this.receiptOpen = true;
+    this.receiptUI.setVisible(true);
+    this.updateReceiptCloseText();
+  }
+
+  private tickReceipt(dt: number): void {
+    if (Phaser.Input.Keyboard.JustDown(this.keyX)) {
+      this.closeBillReceipt();
+      return;
+    }
+    this.receiptCloseLeft -= dt;
+    this.updateReceiptCloseText();
+    if (this.receiptCloseLeft <= 0) this.closeBillReceipt();
+  }
+
+  private updateReceiptCloseText(): void {
+    const secs = Math.max(0, Math.ceil(this.receiptCloseLeft));
+    this.receiptCloseText.setText(`CLOSE (${secs} s)`);
+  }
+
+  private closeBillReceipt(): void {
+    this.receiptOpen = false;
+    this.receiptCloseLeft = 0;
+    this.receiptUI.setVisible(false);
+    this.checkGameOver();
   }
 
   private tickEvents(dt: number): void {
@@ -1014,20 +1166,29 @@ export class GameScene extends Phaser.Scene {
   private refreshHud(): void {
     const hFrac = this.hunger / CONFIG.stats.hunger.max;
     const gFrac = this.hygiene / CONFIG.stats.hygiene.max;
+    const dFrac = Phaser.Math.Clamp(this.debt / CONFIG.gameOver.debtLimit, 0, 1);
     const barFillW = CONFIG.hud.barW - 2;
+    const debtFillW = CONFIG.hud.debtBarW - 2;
     this.hungerBar.width = Math.max(0, barFillW * hFrac);
     this.hygieneBar.width = Math.max(0, barFillW * gFrac);
+    this.debtBar.width = Math.max(0, debtFillW * dFrac);
     this.hungerBar.setFillStyle(this.statBarColor(hFrac));
     this.hygieneBar.setFillStyle(this.statBarColor(gFrac));
+    // Debt fills toward danger (inverse of hunger/hygiene).
+    this.debtBar.setFillStyle(this.statBarColor(1 - dFrac));
     this.hungerText.setText(`${Math.ceil(this.hunger)}`);
     this.hygieneText.setText(`${Math.ceil(this.hygiene)}`);
+    this.debtText.setText(`${this.debt}`);
 
+    // Bare amounts: arcade font has no `$` glyph (money icon carries the meaning).
     this.moneyText.setText(`${this.money}`);
     this.partsText.setText(`${this.parts}`);
-    this.hudText.setText(`DEBT ${this.debt}/${CONFIG.gameOver.debtLimit}`);
-    this.dayText.setText(
-      `DAY ${this.days + 1}  BILL ${Math.ceil(this.dayTimer)}s${this.interactionPaused ? " PAUSE" : ""}`,
-    );
+
+    const bill = this.computeBillBreakdown();
+    const pause = this.interactionPaused || this.receiptOpen ? " PAUSE" : "";
+    // Total is already hike-adjusted; do not show the multiplier (easy to misread as extra).
+    this.dayText.setText(`NEXT ${bill.total}  DAY ${this.days + 1}  ${Math.ceil(this.dayTimer)}s${pause}`);
+    this.dayText.setTint(bill.multiplier > 1 ? CONFIG.colors.danger : CONFIG.colors.money);
   }
 
   /** Shared fill: greenish at full, reddish near empty. */
@@ -1079,6 +1240,8 @@ export class GameScene extends Phaser.Scene {
     this.gameEnded = true;
     this.washing = false;
     this.washUI?.setVisible(false);
+    this.receiptOpen = false;
+    this.receiptUI?.setVisible(false);
     this.closeMenu();
 
     let archetypeLabel: string;

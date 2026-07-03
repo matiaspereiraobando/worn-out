@@ -165,11 +165,14 @@ export const CONFIG = {
     respawnMinSec: 6,
     respawnMaxSec: 12,
     collectRange: 48,
+    floatRisePx: 28,
+    floatDurationMs: 700,
   },
 
   /**
    * Bills: charged every `dayLengthSec` (a "day"). Unpayable remainder becomes
    * debt. Line items scale up when the relevant appliance is broken.
+   * Note: arcade bitmap font has no `$` glyph — HUD/receipt use bare amounts.
    */
   bills: {
     dayLengthSec: 60,
@@ -178,6 +181,7 @@ export const CONFIG = {
     water: 10,
     food: 16,
     brokenMultiplier: 1.75,
+    receiptSec: 6,
   },
 
   /** Events (GDD §9). Slice keeps the two core events. */
@@ -277,6 +281,7 @@ export const CONFIG = {
 
   hud: {
     barW: 100,
+    debtBarW: 90,
   },
 
   font: {

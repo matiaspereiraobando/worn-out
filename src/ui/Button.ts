@@ -47,6 +47,8 @@ export class Button {
   }
 
   setText(text: string): this {
+    // Guard against stale wrappers after scene shutdown destroyed the label.
+    if (!this.label.active || !this.label.fontData) return this;
     this.label.setText(text);
     return this;
   }

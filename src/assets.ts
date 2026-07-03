@@ -16,6 +16,7 @@ export const ASSETS = {
     coin: { key: "coin-strip", path: "assets/sprites/props/coin_32x32_strip.png" },
     icons: { key: "ui-icons", path: "assets/sprites/ui/icons_32x32_sheet.png" },
     cart: { key: "vendor-cart", path: "assets/sprites/props/vendor_cart_32x32.png" },
+    billPaper: { key: "bill-paper", path: "assets/sprites/ui/bill_receipt_paper.png" },
   },
 } as const;
 
