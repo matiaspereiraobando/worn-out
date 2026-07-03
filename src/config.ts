@@ -249,7 +249,7 @@ export const CONFIG = {
   },
 
   world: {
-    hudHeight: 64,
+    hudHeight: 36,
     floorTop: 96,
     floorBottom: 500,
   },
@@ -262,11 +262,11 @@ export const CONFIG = {
    */
   layout: {
     appliances: {
-      fridge: { x: 200, y: 100 },
-      heater: { x: 660, y: 330 },
-      washer: { x: 850, y: 330 },
+      fridge: { x: 200, y: 132 },
+      heater: { x: 660, y: 362 },
+      washer: { x: 850, y: 362 },
     },
-    door: { x: 88, y: 312 },
+    door: { x: 88, y: 344, vendorOffsetY: 48 },
     playerStart: { x: 480, y: 430 },
   },
 
@@ -276,7 +276,7 @@ export const CONFIG = {
   },
 
   hud: {
-    barW: 170,
+    barW: 100,
   },
 
   font: {

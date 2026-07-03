@@ -138,12 +138,9 @@ export class GameScene extends Phaser.Scene {
   private washNeedleRect!: Phaser.GameObjects.Rectangle;
   private washTimerText!: Phaser.GameObjects.BitmapText;
 
-  private keyW!: Phaser.Input.Keyboard.Key;
-  private keyA!: Phaser.Input.Keyboard.Key;
-  private keyS!: Phaser.Input.Keyboard.Key;
-  private keyD!: Phaser.Input.Keyboard.Key;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keyE!: Phaser.Input.Keyboard.Key;
-  private keyP!: Phaser.Input.Keyboard.Key;
+  private keyR!: Phaser.Input.Keyboard.Key;
   private keyNums: Phaser.Input.Keyboard.Key[] = [];
 
   constructor() {
@@ -215,9 +212,15 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.add.image(0, 0, "fallback-room").setOrigin(0).setDepth(-5);
     }
-    this.add.rectangle(0, 0, CONFIG.width, CONFIG.world.hudHeight, c.panel).setOrigin(0);
-    this.add.rectangle(0, CONFIG.world.hudHeight, CONFIG.width, 2, c.grime).setOrigin(0);
-    this.bt(CONFIG.width / 2, CONFIG.world.hudHeight + 6, "APARTMENT", CONFIG.font.sizeSm)
+    this.add
+      .rectangle(0, 0, CONFIG.width, CONFIG.world.hudHeight, c.panel, 0.78)
+      .setOrigin(0)
+      .setDepth(50);
+    this.add
+      .rectangle(0, CONFIG.world.hudHeight, CONFIG.width, 1, c.grime, 0.9)
+      .setOrigin(0)
+      .setDepth(50);
+    this.bt(CONFIG.width / 2, CONFIG.world.hudHeight + 4, "APARTMENT", CONFIG.font.sizeSm)
       .setTint(CONFIG.colors.textDim)
       .setOrigin(0.5, 0);
   }
@@ -226,30 +229,38 @@ export class GameScene extends Phaser.Scene {
     const c = CONFIG.colors;
     const hasIcons = this.textures.exists(ASSETS.sprites.icons.key);
     const barW = CONFIG.hud.barW;
-    const mkBar = (x: number, y: number, color: number) => {
-      this.add.rectangle(x, y, barW, 10, c.panelDark).setStrokeStyle(1, c.grime).setOrigin(0, 0.5);
-      const bar = this.add.rectangle(x + 1, y, barW - 2, 6, color).setOrigin(0, 0.5);
-      const txt = this.bt(x + barW / 2, y, "").setOrigin(0.5).setTint(0x14140f);
-      return { bar, txt };
+    const midY = CONFIG.world.hudHeight / 2;
+    const depth = 51;
+    const mkBar = (x: number) => {
+      this.add
+        .rectangle(x, midY, barW, 8, c.panelDark)
+        .setStrokeStyle(1, c.grime)
+        .setOrigin(0, 0.5)
+        .setDepth(depth);
+      return this.add.rectangle(x + 1, midY, barW - 2, 4, c.ok).setOrigin(0, 0.5).setDepth(depth);
     };
+    // Value sits beside the icon (not on the fill) so it stays readable as the bar color shifts.
+    const mkStatValue = (x: number) =>
+      this.bt(x, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
 
-    const h1 = mkBar(50, 32, c.hunger);
-    const h2 = mkBar(278, 32, c.hygiene);
-    this.hungerBar = h1.bar;
-    this.hygieneBar = h2.bar;
-    this.hungerText = h1.txt;
-    this.hygieneText = h2.txt;
+    // Each stat block: icon (32) · value · bar. Keep a clear gap between blocks.
     if (hasIcons) {
-      this.add.sprite(12, 32, ASSETS.sprites.icons.key, 0).setOrigin(0, 0.5).setDisplaySize(32, 32);
-      this.add.sprite(240, 32, ASSETS.sprites.icons.key, 1).setOrigin(0, 0.5).setDisplaySize(32, 32);
-      this.add.sprite(480, 32, ASSETS.sprites.icons.key, 2).setOrigin(0, 0.5).setDisplaySize(32, 32);
-      this.add.sprite(600, 32, ASSETS.sprites.icons.key, 3).setOrigin(0, 0.5).setDisplaySize(32, 32);
-      this.add.sprite(810, 32, ASSETS.sprites.icons.key, 7).setOrigin(0, 0.5).setDisplaySize(32, 32);
+      const icon = (x: number, frame: number) =>
+        this.add.sprite(x, midY, ASSETS.sprites.icons.key, frame).setOrigin(0, 0.5).setDepth(depth);
+      icon(8, 0);
+      icon(184, 1);
+      icon(360, 2);
+      icon(460, 3);
+      icon(780, 7);
     }
-    this.moneyText = this.bt(516, 20, "", CONFIG.font.sizeMd).setTint(c.money);
-    this.partsText = this.bt(636, 20, "", CONFIG.font.sizeMd).setTint(c.text);
-    this.hudText = this.bt(712, 22, "").setTint(c.textDim);
-    this.dayText = this.bt(950, 12, "").setOrigin(1, 0).setTint(c.money);
+    this.hungerText = mkStatValue(42);
+    this.hungerBar = mkBar(72);
+    this.hygieneText = mkStatValue(218);
+    this.hygieneBar = mkBar(248);
+    this.moneyText = this.bt(396, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.money).setDepth(depth);
+    this.partsText = this.bt(496, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
+    this.hudText = this.bt(560, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.textDim).setDepth(depth);
+    this.dayText = this.bt(952, midY, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(c.money).setDepth(depth);
   }
 
   private buildAppliances(): void {
@@ -307,17 +318,17 @@ export class GameScene extends Phaser.Scene {
       vendorTex = ASSETS.sprites.vendor.key;
       vendorW = 64 * CONFIG.vendor.spriteScale;
       vendorH = 64 * CONFIG.vendor.spriteScale;
-      vendorFrame = 2; // Sheet order S,N,W,E -> face into the room (W).
+      vendorFrame = 0; // Sheet order S,N,W,E -> south into the room (door on left wall).
       flipX = false;
     } else if (hasCart) {
       vendorTex = ASSETS.sprites.cart.key;
       vendorW = 32;
       vendorH = 32;
-      // Source cart faces right; mirror it so it faces into the room.
-      flipX = true;
+      // Source cart faces right; keep it facing into the room from the left-wall door.
+      flipX = false;
     }
     this.vendorNpc = this.add
-      .sprite(this.doorPos.x - 40, this.doorPos.y + 10, vendorTex, vendorFrame)
+      .sprite(this.doorPos.x, this.doorPos.y + CONFIG.layout.door.vendorOffsetY, vendorTex, vendorFrame)
       .setVisible(false)
       .setDisplaySize(vendorW, vendorH)
       .setFlipX(flipX);
@@ -349,7 +360,7 @@ export class GameScene extends Phaser.Scene {
     this.bt(
       CONFIG.width / 2,
       CONFIG.height - 16,
-      "WASD move  E interact  1-N action  P pickup",
+      "Arrows move  E interact  1-N action  R pickup",
       CONFIG.font.sizeSm,
     )
       .setOrigin(0.5)
@@ -399,12 +410,9 @@ export class GameScene extends Phaser.Scene {
   private bindKeys(): void {
     const kb = this.input.keyboard;
     if (!kb) return;
-    this.keyW = kb.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-    this.keyA = kb.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-    this.keyS = kb.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-    this.keyD = kb.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    this.cursors = kb.createCursorKeys();
     this.keyE = kb.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-    this.keyP = kb.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+    this.keyR = kb.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.keyNums = [
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
@@ -486,13 +494,13 @@ export class GameScene extends Phaser.Scene {
   private handleInput(dt: number): void {
     let vx = 0;
     let vy = 0;
-    if (this.keyA?.isDown) vx -= 1;
-    if (this.keyD?.isDown) vx += 1;
-    if (this.keyW?.isDown) vy -= 1;
-    if (this.keyS?.isDown) vy += 1;
+    if (this.cursors.left?.isDown) vx -= 1;
+    if (this.cursors.right?.isDown) vx += 1;
+    if (this.cursors.up?.isDown) vy -= 1;
+    if (this.cursors.down?.isDown) vy += 1;
     this.player.move(vx, vy, dt);
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyP)) this.collectPickupsInRange();
+    if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.collectPickupsInRange();
     if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
       if (this.washing) this.resolveWash(true);
       else this.interact();
@@ -1009,15 +1017,29 @@ export class GameScene extends Phaser.Scene {
     const barFillW = CONFIG.hud.barW - 2;
     this.hungerBar.width = Math.max(0, barFillW * hFrac);
     this.hygieneBar.width = Math.max(0, barFillW * gFrac);
-    this.hungerBar.setFillStyle(hFrac < 0.25 ? CONFIG.colors.danger : CONFIG.colors.hunger);
-    this.hygieneBar.setFillStyle(gFrac < 0.25 ? CONFIG.colors.danger : CONFIG.colors.hygiene);
+    this.hungerBar.setFillStyle(this.statBarColor(hFrac));
+    this.hygieneBar.setFillStyle(this.statBarColor(gFrac));
     this.hungerText.setText(`${Math.ceil(this.hunger)}`);
     this.hygieneText.setText(`${Math.ceil(this.hygiene)}`);
 
     this.moneyText.setText(`${this.money}`);
     this.partsText.setText(`${this.parts}`);
     this.hudText.setText(`DEBT ${this.debt}/${CONFIG.gameOver.debtLimit}`);
-    this.dayText.setText(`DAY ${this.days + 1}\nBILL ${Math.ceil(this.dayTimer)}s${this.interactionPaused ? " PAUSE" : ""}`);
+    this.dayText.setText(
+      `DAY ${this.days + 1}  BILL ${Math.ceil(this.dayTimer)}s${this.interactionPaused ? " PAUSE" : ""}`,
+    );
+  }
+
+  /** Shared fill: greenish at full, reddish near empty. */
+  private statBarColor(frac: number): number {
+    const t = Phaser.Math.Clamp(frac, 0, 1);
+    const full = Phaser.Display.Color.IntegerToColor(CONFIG.colors.ok);
+    const empty = Phaser.Display.Color.IntegerToColor(CONFIG.colors.danger);
+    return Phaser.Display.Color.GetColor(
+      Math.round(Phaser.Math.Linear(empty.red, full.red, t)),
+      Math.round(Phaser.Math.Linear(empty.green, full.green, t)),
+      Math.round(Phaser.Math.Linear(empty.blue, full.blue, t)),
+    );
   }
 
   private log(msg: string): void {

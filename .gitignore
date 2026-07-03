@@ -15,3 +15,7 @@ npm-debug.log*
 
 # Vite cache
 .vite/
+
+# Temp files
+data/
+public/assets/sprites/raw
