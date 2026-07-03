@@ -16,6 +16,7 @@ export class BootScene extends Phaser.Scene {
 
     // Asset-manifest wiring for real art (404-safe; fallbacks are generated in create).
     this.load.image(ASSETS.sprites.room.key, ASSETS.sprites.room.path);
+    this.load.image(ASSETS.sprites.walkmask.key, ASSETS.sprites.walkmask.path);
     this.load.spritesheet(ASSETS.sprites.player.key, ASSETS.sprites.player.path, {
       frameWidth: 60,
       frameHeight: 60,

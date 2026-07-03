@@ -11,11 +11,17 @@ export class Player {
   private readonly scene: Phaser.Scene;
   private animated = false;
   private facing: Facing = "S";
+  private isWalkable: (x: number, y: number) => boolean = () => true;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
     this.sprite = scene.add.sprite(x, y, "fallback-player").setOrigin(0.5);
     this.sprite.setDepth(10);
+  }
+
+  /** Supply a walkability test; blocked target positions are rejected per-axis. */
+  setWalkable(fn: (x: number, y: number) => boolean): void {
+    this.isWalkable = fn;
   }
 
   setTextureKey(textureKey: string): void {
@@ -39,9 +45,13 @@ export class Player {
       dx /= len;
       dy /= len;
     }
-    this.sprite.x += dx * speed * dt;
-    this.sprite.y += dy * speed * dt;
-    this.clampToWorld();
+
+    // Resolve axes independently so the player slides along walls / mask edges.
+    const nextX = this.clampX(this.sprite.x + dx * speed * dt);
+    if (this.isWalkable(nextX, this.sprite.y)) this.sprite.x = nextX;
+    const nextY = this.clampY(this.sprite.y + dy * speed * dt);
+    if (this.isWalkable(this.sprite.x, nextY)) this.sprite.y = nextY;
+
     this.updateAnimation(vx, vy);
   }
 
@@ -93,15 +103,14 @@ export class Player {
     this.sprite.anims.play(`player-walk-${this.facing}`, true);
   }
 
-  private clampToWorld(): void {
+  private clampX(x: number): number {
     const halfW = CONFIG.player.w / 2;
+    return Phaser.Math.Clamp(x, halfW, CONFIG.width - halfW);
+  }
+
+  private clampY(y: number): number {
     const halfH = CONFIG.player.h / 2;
-    this.sprite.x = Phaser.Math.Clamp(this.sprite.x, halfW, CONFIG.width - halfW);
-    this.sprite.y = Phaser.Math.Clamp(
-      this.sprite.y,
-      CONFIG.world.floorTop + halfH,
-      CONFIG.world.floorBottom - halfH,
-    );
+    return Phaser.Math.Clamp(y, CONFIG.world.floorTop + halfH, CONFIG.world.floorBottom - halfH);
   }
 }
 

@@ -5,6 +5,7 @@ import { ApplianceView } from "../ui/ApplianceView";
 import { Button } from "../ui/Button";
 import { PHRASES } from "../phrases";
 import { Player } from "../entities/Player";
+import { WalkMask } from "../model/WalkMask";
 import { ASSETS } from "../assets";
 
 type GameOverCause = "hunger" | "hygiene" | "debt" | "uninhabitable";
@@ -64,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   private appliances!: Record<ApplianceKey, Appliance | null>;
   private views!: Record<ApplianceKey, ApplianceView>;
   private player!: Player;
+  private walkMask!: WalkMask;
   private nearestAppliance: ApplianceKey | null = null;
 
   private money = 0;
@@ -136,10 +138,12 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.resetState();
     this.buildBackground();
+    this.walkMask = new WalkMask(this, ASSETS.sprites.walkmask.key);
     this.buildHud();
     this.buildAppliances();
     this.buildDoor();
     this.buildPlayer();
+    this.player.setWalkable((x, y) => this.canPlayerStandAt(x, y));
     this.buildActionMenu();
     this.buildEventBanner();
     this.buildLog();
@@ -373,10 +377,14 @@ export class GameScene extends Phaser.Scene {
 
   private spawnPickup(p: Pickup): void {
     p.value = Phaser.Math.Between(CONFIG.pickups.minValue, CONFIG.pickups.maxValue);
-    p.sprite.setPosition(
-      Phaser.Math.Between(30, CONFIG.width - 30),
-      Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24),
-    );
+    let px = Phaser.Math.Between(30, CONFIG.width - 30);
+    let py = Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24);
+    // Only drop coins on walkable floor; retry a few times, then accept the last.
+    for (let i = 0; i < 40 && !this.walkMask.isWalkable(px, py); i++) {
+      px = Phaser.Math.Between(30, CONFIG.width - 30);
+      py = Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24);
+    }
+    p.sprite.setPosition(px, py);
     p.label.setPosition(p.sprite.x, p.sprite.y - 20).setText(`${p.value}`);
     if (p.sprite instanceof Phaser.GameObjects.Sprite) {
       p.sprite.setFrame(Phaser.Math.Between(0, 1));
@@ -499,6 +507,38 @@ export class GameScene extends Phaser.Scene {
 
   private distanceToDoor(): number {
     return Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, this.doorPos.x, this.doorPos.y);
+  }
+
+  /**
+   * Validates a small player footprint, not just a single center point.
+   * This prevents directional bleed-through on mask edges (notably while moving down).
+   */
+  private canPlayerStandAt(x: number, y: number): boolean {
+    if (!this.walkMask.available) return true;
+    // Use a feet-biased footprint instead of full body bounds.
+    // In top-down art, the upper body/head can overlap props/walls visually,
+    // but the feet should define actual walkability.
+    const halfW = Math.max(3, CONFIG.player.w * 0.42);
+    const footY = y + CONFIG.player.h * 0.32;
+    // Asymmetric vertical probe: permissive above, strict below.
+    const top = Math.max(2, CONFIG.player.h * 0.14);
+    const bottom = Math.max(4, CONFIG.player.h * 0.34);
+    const samples: Array<[number, number]> = [
+      [x, footY],
+      [x - halfW, footY],
+      [x + halfW, footY],
+      [x, footY - top],
+      [x, footY + bottom],
+      [x - halfW, footY - top],
+      [x + halfW, footY - top],
+      [x - halfW, footY + bottom],
+      [x + halfW, footY + bottom],
+      // Extra lower samples prevent slight downwards bleed-through on tight edges.
+      [x, footY + bottom + 2],
+      [x - halfW * 0.55, footY + bottom + 2],
+      [x + halfW * 0.55, footY + bottom + 2],
+    ];
+    return samples.every(([sx, sy]) => this.walkMask.isWalkable(sx, sy));
   }
 
   private openApplianceMenu(key: ApplianceKey): void {

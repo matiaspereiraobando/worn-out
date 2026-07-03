@@ -49,6 +49,16 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 - **Prompt:**
   > Top-down pixel art grimy apartment interior, 960x540 canvas, 1990s gritty style, cold olive/teal walls with peeling paint and water stains, cool blue-green tiled floor with cracks and a small dark grime stain, one warm overhead lamp casting a soft yellow pool of light in the center against the cold surroundings, fixed ambient props around the edges (exposed wall pipes, small wall AC unit, stopped wall clock stuck on an old time, calendar frozen on 2019, taped unpaid bills, toolbox, dead potted plant, peeling posters, a couple of scattered coins, one tiny cockroach), empty floor space for gameplay in the center, palette bone-cream + olive-green + rust-red + mustard, no characters, no machines, no text, no anti-aliasing, high readability, game-ready background.
 
+### 1b) Walkable-area mask (paired with the room background)
+
+- **Path:** `public/assets/sprites/world/walkmask_960x540.png`
+- **Size:** `960x540` (same dimensions as the room background; smaller sizes work too and are scaled up)
+- **Frames:** 1
+- **Not rendered** in-game; it only defines where the player can walk and where coins spawn.
+- **How to author:** overlay it on top of `room_topdown_960x540.png`, then paint the floor the player should be able to stand on as solid **white**. Paint everything blocked (walls, furniture, edges, out-of-bounds) as solid **black** or leave it **transparent**.
+- **Rule used by the game:** a pixel is walkable when it is opaque (alpha >= 32) and light (average RGB > 100). So white = walkable, black/transparent = blocked.
+- **Fallback:** if this file is absent, the game falls back to the plain rectangular floor bounds (`world.floorTop`..`world.floorBottom`, full width) and everything inside that box is walkable.
+
 ### 2) Player character spritesheet
 
 - **Path:** `public/assets/sprites/character/player_topdown_8dir_60x60_sheet.png`
