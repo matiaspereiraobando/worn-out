@@ -127,10 +127,21 @@ export class GameScene extends Phaser.Scene {
   private partsText!: Phaser.GameObjects.BitmapText;
   private dayText!: Phaser.GameObjects.BitmapText;
   private receiptUI!: Phaser.GameObjects.Container;
-  private receiptBodyText!: Phaser.GameObjects.BitmapText;
+  private receiptDayText!: Phaser.GameObjects.BitmapText;
+  private receiptItemLabels: Phaser.GameObjects.BitmapText[] = [];
+  private receiptItemAmounts: Phaser.GameObjects.BitmapText[] = [];
+  private receiptHikeRow!: Phaser.GameObjects.Container;
+  private receiptHikeAmount!: Phaser.GameObjects.BitmapText;
+  private receiptTotalAmount!: Phaser.GameObjects.BitmapText;
+  private receiptPaidAmount!: Phaser.GameObjects.BitmapText;
+  private receiptDebtRow!: Phaser.GameObjects.Container;
+  private receiptDebtAmount!: Phaser.GameObjects.BitmapText;
   private receiptCloseText!: Phaser.GameObjects.BitmapText;
   private logText!: Phaser.GameObjects.BitmapText;
   private eventBanner!: Phaser.GameObjects.Container;
+  private eventStrip!: Phaser.GameObjects.Image;
+  private eventStripWarnKey = "fallback-strip-warn";
+  private eventStripDangerKey = "fallback-strip-danger";
   private eventText!: Phaser.GameObjects.BitmapText;
   private vendorText!: Phaser.GameObjects.BitmapText;
   private surgeIcon?: Phaser.GameObjects.Sprite;
@@ -289,24 +300,91 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildBillReceipt(): void {
-    const paperKey = this.textures.exists(ASSETS.sprites.billPaper.key)
-      ? ASSETS.sprites.billPaper.key
-      : "fallback-bill-paper";
-    const paper = this.add.image(0, 0, paperKey).setOrigin(0.5);
-    if (paperKey === "fallback-bill-paper") {
-      paper.setDisplaySize(200, 280);
-    }
-    // Dark ink on bone paper — bone text was unreadable on the receipt background.
+    // Programmatic invoice: bone paper, left labels / right amounts, rules under lines.
+    // Scene instances are reused on retry — rebuild fresh references each create().
+    this.receiptItemLabels = [];
+    this.receiptItemAmounts = [];
+    const paperW = 260;
+    const paperH = 320;
+    const colL = -108;
+    const colR = 108;
+    const ruleW = colR - colL;
     const ink = CONFIG.colors.bg;
     const inkDim = CONFIG.colors.panel;
-    const title = this.bt(0, -110, "DAILY BILL", CONFIG.font.sizeMd).setOrigin(0.5).setTint(ink);
-    this.receiptBodyText = this.bt(0, -70, "", CONFIG.font.sizeSm)
-      .setOrigin(0.5, 0)
-      .setTint(ink)
-      .setCenterAlign();
-    this.receiptCloseText = this.bt(0, 118, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    const paperFill = 0xe8dcc8;
+    const ruleColor = 0x8a8470;
+
+    const scrim = this.add
+      .rectangle(0, 0, CONFIG.width, CONFIG.height, CONFIG.colors.bg, 0.55)
+      .setOrigin(0.5);
+    const paper = this.add
+      .rectangle(0, 0, paperW, paperH, paperFill)
+      .setStrokeStyle(2, CONFIG.colors.grime)
+      .setOrigin(0.5);
+
+    const title = this.bt(0, -138, "DAILY BILL", CONFIG.font.sizeMd).setOrigin(0.5).setTint(ink);
+    this.receiptDayText = this.bt(0, -120, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    const headerRule = this.add.rectangle(0, -108, ruleW, 1, ruleColor).setOrigin(0.5);
+
+    const children: Phaser.GameObjects.GameObject[] = [scrim, paper, title, this.receiptDayText, headerRule];
+
+    const itemNames = ["RENT", "ELEC", "WATER", "FOOD"];
+    let y = -88;
+    for (const name of itemNames) {
+      const label = this.bt(colL, y, name, CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(ink);
+      const amount = this.bt(colR, y, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(ink);
+      const rule = this.add.rectangle(0, y + 9, ruleW, 1, ruleColor).setOrigin(0.5);
+      this.receiptItemLabels.push(label);
+      this.receiptItemAmounts.push(amount);
+      children.push(label, amount, rule);
+      y += 22;
+    }
+
+    // Optional price-hike surcharge row (hidden unless active).
+    const hikeLabel = this.bt(colL, y, "HIKE", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(CONFIG.colors.danger);
+    this.receiptHikeAmount = this.bt(colR, y, "", CONFIG.font.sizeSm)
+      .setOrigin(1, 0.5)
+      .setTint(CONFIG.colors.danger);
+    const hikeRule = this.add.rectangle(0, y + 9, ruleW, 1, ruleColor).setOrigin(0.5);
+    this.receiptHikeRow = this.add.container(0, 0, [hikeLabel, this.receiptHikeAmount, hikeRule]).setVisible(false);
+    children.push(this.receiptHikeRow);
+
+    // Grand total block — extra air above, double rule, then TOTAL / PAID / DEBT.
+    const totalTop = 48;
+    children.push(this.add.rectangle(0, totalTop, ruleW, 1, ink).setOrigin(0.5));
+    children.push(this.add.rectangle(0, totalTop + 3, ruleW, 1, ink).setOrigin(0.5));
+
+    const totalLabel = this.bt(colL, totalTop + 22, "TOTAL", CONFIG.font.sizeMd).setOrigin(0, 0.5).setTint(ink);
+    this.receiptTotalAmount = this.bt(colR, totalTop + 22, "", CONFIG.font.sizeMd)
+      .setOrigin(1, 0.5)
+      .setTint(ink);
+    children.push(totalLabel, this.receiptTotalAmount);
+    children.push(this.add.rectangle(0, totalTop + 34, ruleW, 1, ruleColor).setOrigin(0.5));
+
+    const paidLabel = this.bt(colL, totalTop + 50, "PAID", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(inkDim);
+    this.receiptPaidAmount = this.bt(colR, totalTop + 50, "", CONFIG.font.sizeSm)
+      .setOrigin(1, 0.5)
+      .setTint(inkDim);
+    children.push(paidLabel, this.receiptPaidAmount);
+    children.push(this.add.rectangle(0, totalTop + 59, ruleW, 1, ruleColor).setOrigin(0.5));
+
+    const debtLabel = this.bt(colL, totalTop + 74, "DEBT", CONFIG.font.sizeSm)
+      .setOrigin(0, 0.5)
+      .setTint(CONFIG.colors.danger);
+    this.receiptDebtAmount = this.bt(colR, totalTop + 74, "", CONFIG.font.sizeSm)
+      .setOrigin(1, 0.5)
+      .setTint(CONFIG.colors.danger);
+    const debtRule = this.add.rectangle(0, totalTop + 83, ruleW, 1, ruleColor).setOrigin(0.5);
+    this.receiptDebtRow = this.add
+      .container(0, 0, [debtLabel, this.receiptDebtAmount, debtRule])
+      .setVisible(false);
+    children.push(this.receiptDebtRow);
+
+    this.receiptCloseText = this.bt(0, 138, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    children.push(this.receiptCloseText);
+
     this.receiptUI = this.add
-      .container(CONFIG.width / 2, CONFIG.height / 2, [paper, title, this.receiptBodyText, this.receiptCloseText])
+      .container(CONFIG.width / 2, CONFIG.height / 2, children)
       .setVisible(false)
       .setDepth(1200);
   }
@@ -419,26 +497,44 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildEventBanner(): void {
-    const bg = this.add
-      .rectangle(0, 0, 520, 40, CONFIG.colors.panelDark)
-      .setStrokeStyle(1, CONFIG.colors.danger)
-      .setOrigin(0.5);
+    // Full-width 960x40 strips; text sits in the centered 26px band (7px pad each side).
+    this.eventStripWarnKey = this.textures.exists(ASSETS.sprites.stripWarn.key)
+      ? ASSETS.sprites.stripWarn.key
+      : "fallback-strip-warn";
+    this.eventStripDangerKey = this.textures.exists(ASSETS.sprites.stripDanger.key)
+      ? ASSETS.sprites.stripDanger.key
+      : "fallback-strip-danger";
+    this.eventStrip = this.add.image(0, 0, this.eventStripWarnKey).setOrigin(0.5);
     const hasIcons = this.textures.exists(ASSETS.sprites.icons.key);
     if (hasIcons) {
       this.surgeIcon = this.add
-        .sprite(-248, 0, ASSETS.sprites.icons.key, 6)
-        .setOrigin(0, 0.5)
-        .setDisplaySize(32, 32)
+        .sprite(-440, 0, ASSETS.sprites.icons.key, 6)
+        .setOrigin(0.5)
         .setVisible(false);
     }
-    this.eventText = this.bt(-204, -8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.danger).setOrigin(0, 0);
-    this.vendorText = this.bt(-204, 8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.money).setOrigin(0, 0);
-    const children: Phaser.GameObjects.GameObject[] = [bg];
+    this.eventText = this.bt(0, -6, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.bg);
+    this.vendorText = this.bt(0, 6, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.panel);
+    const children: Phaser.GameObjects.GameObject[] = [this.eventStrip];
     if (this.surgeIcon) children.push(this.surgeIcon);
     children.push(this.eventText, this.vendorText);
     this.eventBanner = this.add
-      .container(CONFIG.width / 2, CONFIG.world.hudHeight + 28, children)
-      .setVisible(false);
+      .container(CONFIG.width / 2, CONFIG.world.hudHeight + 20, children)
+      .setVisible(false)
+      .setDepth(55);
+  }
+
+  /** Yellow warn strip for vendor/price hike; red danger strip for power surges. */
+  private setEventStrip(kind: "warn" | "danger"): void {
+    const key = kind === "danger" ? this.eventStripDangerKey : this.eventStripWarnKey;
+    if (this.eventStrip.texture.key !== key) this.eventStrip.setTexture(key);
+    // Dark ink on yellow, bone ink on red.
+    if (kind === "danger") {
+      this.eventText.setTint(CONFIG.colors.text);
+      this.vendorText.setTint(CONFIG.colors.textDim);
+    } else {
+      this.eventText.setTint(CONFIG.colors.bg);
+      this.vendorText.setTint(CONFIG.colors.panel);
+    }
   }
 
   private buildLog(): void {
@@ -1010,21 +1106,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showBillReceipt(bill: BillBreakdown, paid: number, shortfall: number): void {
-    const waterTag = bill.heaterBroken ? " !" : "";
-    const foodTag = bill.fridgeBroken ? " !" : "";
-    const hikeLine = bill.multiplier > 1 ? `\nHIKE x${bill.multiplier}` : "";
-    const debtLine = shortfall > 0 ? `\nDEBT +${shortfall}` : "";
     // Bare amounts: arcade font has no `$` glyph.
-    this.receiptBodyText.setText(
-      `RENT ${bill.rent}\n` +
-        `ELEC ${bill.electricity}\n` +
-        `WATER ${bill.water}${waterTag}\n` +
-        `FOOD ${bill.food}${foodTag}` +
-        hikeLine +
-        `\nTOTAL ${bill.total}\n` +
-        `PAID ${paid}` +
-        debtLine,
-    );
+    this.receiptDayText.setText(`DAY ${this.days}`);
+    const amounts = [bill.rent, bill.electricity, bill.water, bill.food];
+    const labels = [
+      "RENT",
+      "ELEC",
+      bill.heaterBroken ? "WATER !" : "WATER",
+      bill.fridgeBroken ? "FOOD !" : "FOOD",
+    ];
+    for (let i = 0; i < 4; i++) {
+      this.receiptItemLabels[i].setText(labels[i]);
+      this.receiptItemAmounts[i].setText(`${amounts[i]}`);
+    }
+
+    if (bill.multiplier > 1) {
+      const surcharge = bill.total - bill.subtotal;
+      this.receiptHikeAmount.setText(`x${bill.multiplier}  +${surcharge}`);
+      this.receiptHikeRow.setVisible(true);
+    } else {
+      this.receiptHikeRow.setVisible(false);
+    }
+
+    this.receiptTotalAmount.setText(`${bill.total}`);
+    this.receiptPaidAmount.setText(`${paid}`);
+    if (shortfall > 0) {
+      this.receiptDebtAmount.setText(`+${shortfall}`);
+      this.receiptDebtRow.setVisible(true);
+    } else {
+      this.receiptDebtRow.setVisible(false);
+    }
+
     this.receiptCloseLeft = CONFIG.bills.receiptSec;
     this.receiptOpen = true;
     this.receiptUI.setVisible(true);
@@ -1091,11 +1203,13 @@ export class GameScene extends Phaser.Scene {
     }
     const t = Math.ceil(this.activeEvent.warningLeft);
     if (this.activeEvent.type === "surge") {
+      this.setEventStrip("danger");
       this.surgeIcon?.setVisible(true);
       const target = this.activeEvent.targetKey ? CONFIG.appliances[this.activeEvent.targetKey].label : "Machine";
       this.eventText.setText(`SURGE ${target.toUpperCase()} ${t}s`);
       this.vendorText.setText("Walk there and unplug in time.");
     } else {
+      this.setEventStrip("warn");
       this.surgeIcon?.setVisible(false);
       this.eventText.setText(`PRICE HIKE ${t}s`);
       this.vendorText.setText(`Next bill x${CONFIG.events.priceHike.billMultiplier}`);
@@ -1135,9 +1249,13 @@ export class GameScene extends Phaser.Scene {
       }
     } else if (this.vendorState === "warning") {
       this.vendorTimer -= dtReal;
-      this.eventBanner.setVisible(true);
-      this.surgeIcon?.setVisible(false);
-      this.vendorText.setText(`DON JOSE in ${Math.ceil(this.vendorTimer)}s`);
+      if (!this.activeEvent) {
+        this.setEventStrip("warn");
+        this.surgeIcon?.setVisible(false);
+        this.eventBanner.setVisible(true);
+        this.eventText.setText("VENDOR");
+        this.vendorText.setText(`DON JOSE in ${Math.ceil(this.vendorTimer)}s`);
+      }
       if (this.vendorTimer <= 0) {
         this.vendorState = "open";
         this.vendorTimer = CONFIG.vendor.stayOpenSec;
@@ -1146,8 +1264,9 @@ export class GameScene extends Phaser.Scene {
       if (!this.interactionPaused) this.vendorTimer -= dtReal;
       this.vendorNpc.setVisible(true);
       if (!this.activeEvent) {
-        this.eventBanner.setVisible(true);
+        this.setEventStrip("warn");
         this.surgeIcon?.setVisible(false);
+        this.eventBanner.setVisible(true);
         this.eventText.setText("DOOR ACTIVE");
         this.vendorText.setText(`Press E near door (${Math.ceil(this.vendorTimer)}s)`);
       }

@@ -144,14 +144,20 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 - **Prompt:**
   > Pixel art UI icon strip, 8 icons horizontally, each 32x32, total 256x32, icons for hunger, hygiene, money, spare parts, plug on, plug off, lightning surge warning, and day/clock, high readability on dark olive background, bone-cream line work with palette-coded fills (hunger warm ochre-orange, hygiene cool teal-blue, money mustard-gold, plug-on olive-green, plug-off/surge rust-red, clock bone), transparent background, no anti-aliasing.
 
-### 9b) Bill receipt paper
+### 9b) Bill receipt (programmatic)
 
-- **Path:** `public/assets/sprites/ui/bill_receipt_paper.png`
-- **Size:** `200x280` (or similar; code scales fallback to this)
-- **Use:** Modal daily-bill breakdown overlay (line items, total, paid, debt shortfall, `CLOSE (N s)` footer)
-- **Note:** Arcade bitmap font has no `$` glyph — receipt text uses bare amounts. Optional future: add `$` to `arcade.png` / `arcade.xml`.
+- **Implementation:** Drawn in `GameScene.buildBillReceipt()` — bone panel, left labels / right amounts, hairline under each item, double rule above **TOTAL**, then **PAID** / **DEBT**.
+- **Note:** Arcade bitmap font has no `$` glyph — amounts are bare numbers. Optional paper sprite (`bill_receipt_paper.png`) is unused while the layout is code-driven.
+
+### 9c) Event notification strips
+
+- **Paths:**
+  - `public/assets/sprites/ui/strip_warn_960x40.png` — yellow; vendor + price hike
+  - `public/assets/sprites/ui/strip_danger_960x40.png` — red; power surge
+- **Size:** `960x40` full-width banner under the HUD
+- **Text band:** vertically centered clear area **26px** tall (7px padding top/bottom)
 - **Prompt:**
-  > Pixel art worn paper bill / invoice sheet for grimy apartment game UI, 200x280, bone-cream paper with grime edges and faint fold lines, empty center area for overlaid text, no anti-aliasing, palette bone + olive grime + rust accent, transparent background outside the paper.
+  > Pixel art full-width UI event banner strip 960x40 for grimy apartment game, decorative edges with a clear flat center band 26px tall for overlaid bitmap text, no anti-aliasing. Warn variant: mustard/ochre yellow. Danger variant: saturated rust-red.
 
 ---
 
