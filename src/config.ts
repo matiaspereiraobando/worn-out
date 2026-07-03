@@ -11,24 +11,32 @@
 
 export const CONFIG = {
   /** Logical game resolution. Scaled to fit the window. */
-  width: 640,
-  height: 360,
+  width: 960,
+  height: 540,
 
-  /** Oppressive kitchen-grunge palette (GDD §17). Hex ints for Phaser. */
+  /**
+   * Oppressive kitchen-grunge palette (GDD §17), derived from the Midjourney
+   * style board in docs/style/ (worn-out_palette-01 + style-ref-02):
+   * cold olive/teal walls, bone-cream appliances, mustard/ochre money,
+   * rust-red danger, warm lamp glow. Hex ints for Phaser.
+   */
   colors: {
-    bg: 0x1c1c14,
-    panel: 0x2b2b20,
-    panelDark: 0x201f16,
-    grime: 0x3a3a2a,
-    danger: 0xd23b2e, // saturated red
-    warn: 0xd9a441,
-    money: 0xc9b458, // dim yellow
-    ok: 0x7fa663,
-    text: 0xe8e4d0, // bone white
-    textDim: 0x9a9680,
-    hp: 0x6f9bd2,
-    hunger: 0xd98e4a,
-    hygiene: 0x5fb0c4,
+    bg: 0x161a12, // near-black olive (walls in shadow)
+    panel: 0x2a3125, // dark olive panel
+    panelDark: 0x1e2319,
+    grime: 0x3b4636, // mid olive grime
+    steel: 0x47534c, // slate blue-green (appliance metal / trim)
+    danger: 0xbf4130, // saturated rust-red (red door accent)
+    rust: 0xab4630, // terracotta weathering accent
+    warn: 0xcf9a3f, // caution ochre-orange
+    money: 0xc7a24a, // mustard/ochre gold (coins)
+    ok: 0x6e7b5a, // muted olive green
+    text: 0xe7e2cd, // bone / cream
+    textDim: 0x9a9782, // dim bone
+    hp: 0x5f9ea0, // desaturated teal
+    hunger: 0xcf8a3f, // warm ochre-orange
+    hygiene: 0x5f9fb0, // cool teal-blue
+    lamp: 0xf2c65a, // warm lamp glow (lighting accent)
   },
 
   /**
@@ -139,7 +147,7 @@ export const CONFIG = {
     maxValue: 7,
     respawnMinSec: 6,
     respawnMaxSec: 12,
-    collectRange: 34,
+    collectRange: 48,
   },
 
   /**
@@ -207,20 +215,24 @@ export const CONFIG = {
   targetRunSeconds: 180,
 
   player: {
-    speed: 88,
-    w: 14,
-    h: 14,
+    speed: 132,
+    w: 20,
+    h: 20,
   },
 
   world: {
-    hudHeight: 58,
-    floorTop: 70,
-    floorBottom: 344,
+    hudHeight: 64,
+    floorTop: 96,
+    floorBottom: 500,
   },
 
   interaction: {
-    applianceRange: 52,
-    doorRange: 42,
+    applianceRange: 72,
+    doorRange: 60,
+  },
+
+  hud: {
+    barW: 170,
   },
 
   font: {

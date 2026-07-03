@@ -2,18 +2,39 @@
 
 This file defines every sprite currently needed for the **top-down retro pixel-art slice**.
 
+> **Style source:** the palette anchors and tone below are derived from the
+> Midjourney style/mood board in `docs/style/`:
+> `worn-out_palette-01.png` (the 6-swatch color spine + weathered olive/rust
+> machine texture), `worn-out_stye-ref-01.png` (grimy basement kitchen, warm
+> lamp glow, red fridge, cash piling up), and `worn-out_stye-ref-02.png` (the
+> closest pixel-art target: cold teal walls, cream fridge, white cylindrical
+> wall boilers, red danger door, cool blue-green tile floor, scattered coins).
+> Refs 01/02 are side-elevation rooms — borrow their **palette, mood, and object
+> design**, but keep our **top-down 3-4 gameplay perspective**.
+
 ## Global style for all prompts
 
 - Perspective: **top-down / slight 3-4 view**
 - Style: **1990s gritty pixel art**, clean silhouettes, no anti-aliasing
-- Palette anchors:
-  - background/grime: `#1c1c14`, `#2b2b20`, `#3a3a2a`
-  - danger: `#d23b2e`
-  - warning: `#d9a441`
-  - money: `#c9b458`
-  - ui/light: `#e8e4d0`, `#9a9680`
+- Palette anchors (locked to `worn-out_palette-01.png`):
+  - slate blue-green (metal/trim): `#47534c`
+  - bone / cream (appliances, UI text): `#e7e2cd`
+  - muted olive green (healthy/ok): `#6e7b5a`
+  - mustard / ochre gold (money, coins): `#c7a24a`
+  - dark forest olive (grime, walls): `#505f3b`, `#3b4636`
+  - rust / terracotta (weathering): `#ab4630`
+  - shadow olive (bg): `#161a12`, `#1e2319`
+  - danger red (accent, e.g. red door): `#bf4130`
+  - warm lamp glow (lighting accent): `#f2c65a`
+- Mood cues (from the board): cold olive/teal grimy walls; a single warm
+  overhead lamp casting a yellow pool of light against cold surroundings; big
+  appliances in **bone-cream** with rust streaks, fridge magnets and taped
+  notes; exposed pipes and a wall AC unit; a stopped wall clock; peeling
+  posters; a dead potted plant; scattered coins/bills and a small grime/blood
+  stain for grit. Not clean or cute — lived-in, tired, faintly menacing.
 - Export: transparent background for sprite assets (except full background image)
-- Grid: 8px-friendly shapes inside 16/32/48 px canvases
+- PixelLab constraint: sprites must be **square** and at least `32x32`
+- Grid: 8px-friendly shapes inside 32/48/64 px square canvases
 - Tone: satirical, worn-down household machines with personality
 
 ---
@@ -22,76 +43,76 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 
 ### 1) Room background
 
-- **Path:** `public/assets/sprites/world/room_topdown_640x360.png`
-- **Size:** `640x360`
+- **Path:** `public/assets/sprites/world/room_topdown_960x540.png`
+- **Size:** `960x540`
 - **Frames:** 1
 - **Prompt:**
-  > Top-down pixel art apartment interior, 640x360 canvas, retro gritty style, dirty green-brown kitchen/living space, worn floor tiles, grimy walls, fixed ambient props (old calendar stuck on 2019, pile of unpaid bills on table, toolbox on floor, one cockroach as tiny detail), empty floor space for gameplay in center, no characters, no machines, no text, no anti-aliasing, high readability, game-ready background.
+  > Top-down pixel art grimy apartment interior, 960x540 canvas, 1990s gritty style, cold olive/teal walls with peeling paint and water stains, cool blue-green tiled floor with cracks and a small dark grime stain, one warm overhead lamp casting a soft yellow pool of light in the center against the cold surroundings, fixed ambient props around the edges (exposed wall pipes, small wall AC unit, stopped wall clock stuck on an old time, calendar frozen on 2019, taped unpaid bills, toolbox, dead potted plant, peeling posters, a couple of scattered coins, one tiny cockroach), empty floor space for gameplay in the center, palette bone-cream + olive-green + rust-red + mustard, no characters, no machines, no text, no anti-aliasing, high readability, game-ready background.
 
 ### 2) Player character spritesheet
 
-- **Path:** `public/assets/sprites/character/player_topdown_32x32_sheet.png`
-- **Size:** `128x96` (4 columns x 3 rows of `32x32`)
+- **Path:** `public/assets/sprites/character/player_topdown_8dir_32x32_sheet.png`
+- **Size:** `128x128` (4 columns x 4 rows of `32x32`)
 - **Frames layout:**
-  - Row 1: down facing `idle, walk1, idle, walk2`
-  - Row 2: left facing `idle, walk1, idle, walk2`
-  - Row 3: up facing `idle, walk1, idle, walk2`
-  - Right facing will be mirrored in code from left row
+  - 8 facings total: `N, NE, E, SE, S, SW, W, NW`
+  - For each facing, provide `idle + walk` (2 frames)
+  - Current packed layout target: 16 frames total, arranged on a `4x4` sheet
 - **Prompt:**
-  > Pixel art top-down human character for gloomy apartment survival game, 32x32 per frame, spritesheet 128x96, 3 directional rows (down, left, up), each row with 4 frames idle/walk cycle, simple readable silhouette, worn clothes, slight satirical style, limited dirty palette, transparent background, no anti-aliasing.
+  > Pixel art top-down human character for gloomy apartment survival game, 32x32 per frame, spritesheet 128x128, 8 directional facings (N, NE, E, SE, S, SW, W, NW), each facing has idle + walk frame (16 frames total), simple readable silhouette, tired posture, worn muted clothes (faded olive-green shirt, dark slate trousers, bone-grey undershirt) with a small rust-red accent, transparent background, no anti-aliasing, palette olive-green + slate + bone with rust accent to match grimy apartment.
 
 ### 3) Fridge states
 
-- **Path:** `public/assets/sprites/appliances/fridge_states_32x48.png`
-- **Size:** `96x48` (3 frames horizontally, each `32x48`)
+- **Path:** `public/assets/sprites/appliances/fridge_states_48x48.png`
+- **Size:** `144x48` (3 frames horizontally, each `48x48`)
 - **Frames:** normal, damaged, dead
 - **Prompt:**
-  > Top-down 3-4 view pixel art old fridge, 32x48 per frame, 3-frame strip 96x48, frame1 normal but worn, frame2 damaged with cracks and tiny sparks, frame3 dead/off dark and lifeless, include personality sticker detail, transparent background, no anti-aliasing, same palette family as grimy apartment.
+  > Top-down 3-4 view pixel art old two-door fridge, bone-cream body with rust streaks, chunky handles, fridge magnets and a couple of taped notes for personality, 48x48 per frame, 3-frame strip 144x48, frame1 normal but worn and grimy, frame2 damaged with dents/cracks and tiny sparks, frame3 dead/off dark and lifeless, transparent background, no anti-aliasing, palette bone-cream + rust + olive to match grimy apartment.
 
 ### 4) Water heater states
 
-- **Path:** `public/assets/sprites/appliances/heater_states_32x48.png`
-- **Size:** `96x48` (3 frames horizontally, each `32x48`)
+- **Path:** `public/assets/sprites/appliances/heater_states_48x48.png`
+- **Size:** `144x48` (3 frames horizontally, each `48x48`)
 - **Frames:** normal, damaged, dead
 - **Prompt:**
-  > Top-down 3-4 view pixel art old water heater boiler, 32x48 per frame, 3-frame strip 96x48, frame1 normal worn unit, frame2 damaged with leak/sparks, frame3 dead dark inactive unit, readable silhouette, transparent background, no anti-aliasing.
+  > Top-down 3-4 view pixel art old cylindrical water heater boiler tank, white/bone metal with rust drips and a small pressure gauge and pipes on top, 48x48 per frame, 3-frame strip 144x48, frame1 normal worn unit, frame2 damaged with water leak and sparks, frame3 dead dark inactive unit, readable silhouette, transparent background, no anti-aliasing, palette bone-cream + rust + slate to match grimy apartment.
 
 ### 5) Apartment door states
 
-- **Path:** `public/assets/sprites/world/door_states_32x48.png`
-- **Size:** `64x48` (2 frames horizontally, each `32x48`)
+- **Path:** `public/assets/sprites/world/door_states_48x48.png`
+- **Size:** `96x48` (2 frames horizontally, each `48x48`)
 - **Frames:** closed/inactive, active/vendor-arrived
 - **Prompt:**
-  > Pixel art apartment door in top-down 3-4 perspective, 32x48 per frame, two-frame strip 64x48, frame1 closed neutral door, frame2 highlighted active door with subtle warm light cue for vendor interaction, transparent background, no anti-aliasing.
+  > Pixel art battered red metal apartment door in top-down 3-4 perspective, rust-red with scuffs, dents and a small taped notice, 48x48 per frame, two-frame strip 96x48, frame1 closed neutral door in cold light, frame2 highlighted active door with a warm yellow lamp glow spilling around it for vendor interaction, transparent background, no anti-aliasing, palette rust-red + bone + warm lamp glow.
 
 ### 6) Don Jose vendor
 
-- **Path:** `public/assets/sprites/props/vendor_don_jose_32x48.png`
-- **Size:** `32x48`
-- **Frames:** 1
+- **Path:** `public/assets/sprites/props/vendor_don_jose_4dir_32x32_sheet.png`
+- **Size:** `128x32` (4 frames horizontally, each `32x32`)
+- **Frames:** 4 idle facings `down, up, left, right` (no walk cycle)
 - **Prompt:**
-  > Top-down 3-4 pixel art handyman vendor character, overalls, awkward friendly smile, slightly shady vibe, 32x48, transparent background, no anti-aliasing, readable silhouette.
+  > Top-down 3-4 pixel art handyman vendor character, grimy mustard/ochre overalls over a bone undershirt, rust-red cap, awkward friendly smile, slightly shady vibe, 32x32 per frame, 4 idle facings only (down/up/left/right), no walk cycle, transparent background, no anti-aliasing, readable silhouette, palette mustard + rust + bone + olive to match grimy apartment.
 
 ### 7) Tool cart prop (optional but recommended)
 
 - **Path:** `public/assets/sprites/props/vendor_cart_32x32.png`
 - **Size:** `32x32`
 - **Frames:** 1
+- **Note:** filename is `vendor_cart_32x32.png` (fixed from accidental `.png.png`)
 - **Prompt:**
-  > Pixel art small repair tool cart in top-down 3-4 perspective, old metal, cluttered tools, 32x32, transparent background, no anti-aliasing.
+  > Pixel art small repair tool cart in top-down 3-4 perspective, old slate blue-green metal frame with rust streaks, cluttered tools with mustard and bone highlights, 32x32, transparent background, no anti-aliasing, palette slate + rust + mustard + bone to match grimy apartment.
 
 ### 8) Coin pickup
 
-- **Path:** `public/assets/sprites/props/coin_16x16_strip.png`
-- **Size:** `32x16` (2 frames, each `16x16`)
+- **Path:** `public/assets/sprites/props/coin_32x32_strip.png`
+- **Size:** `64x32` (2 frames, each `32x32`)
 - **Frames:** base, shine
 - **Prompt:**
-  > Pixel art coin pickup icon for grimy apartment game, 16x16 per frame, 2-frame strip 32x16 with subtle shine variation, dim yellow/gold palette, transparent background, no anti-aliasing.
+  > Pixel art coin pickup icon for grimy apartment game, 32x32 per frame, 2-frame strip 64x32 with subtle shine variation, grimy mustard/ochre-gold coin with a slightly tarnished edge, transparent background, no anti-aliasing, palette mustard-gold + rust shadow.
 
 ### 9) UI icon sheet
 
-- **Path:** `public/assets/sprites/ui/icons_16x16_sheet.png`
-- **Size:** `128x16` (8 icons horizontally, each `16x16`)
+- **Path:** `public/assets/sprites/ui/icons_32x32_sheet.png`
+- **Size:** `256x32` (8 icons horizontally, each `32x32`)
 - **Icons in order:**
   1. hunger
   2. hygiene
@@ -102,23 +123,23 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
   7. surge/lightning
   8. day/clock
 - **Prompt:**
-  > Pixel art UI icon strip, 8 icons horizontally, each 16x16, total 128x16, icons for hunger, hygiene, money, spare parts, plug on, plug off, lightning surge warning, and day/clock, high readability on dark background, limited gritty palette, transparent background, no anti-aliasing.
+  > Pixel art UI icon strip, 8 icons horizontally, each 32x32, total 256x32, icons for hunger, hygiene, money, spare parts, plug on, plug off, lightning surge warning, and day/clock, high readability on dark olive background, bone-cream line work with palette-coded fills (hunger warm ochre-orange, hygiene cool teal-blue, money mustard-gold, plug-on olive-green, plug-off/surge rust-red, clock bone), transparent background, no anti-aliasing.
 
 ---
 
 ## Optional post-slice assets (later expansion)
 
 ### Stove states (post-slice)
-- **Path:** `public/assets/sprites/appliances/stove_states_32x48.png`
-- **Size:** `96x48`
+- **Path:** `public/assets/sprites/appliances/stove_states_48x48.png`
+- **Size:** `144x48`
 
 ### Washing machine states (post-slice)
-- **Path:** `public/assets/sprites/appliances/washer_states_32x48.png`
-- **Size:** `96x48`
+- **Path:** `public/assets/sprites/appliances/washer_states_48x48.png`
+- **Size:** `144x48`
 
 ### Mood icon (post-slice)
-- **Path:** `public/assets/sprites/ui/icon_mood_16x16.png`
-- **Size:** `16x16`
+- **Path:** `public/assets/sprites/ui/icon_mood_32x32.png`
+- **Size:** `32x32`
 
 ---
 
@@ -127,5 +148,5 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 - Keep filenames exactly as listed so code wiring is plug-and-play.
 - Keep exact dimensions; avoid auto-cropping.
 - PNG only.
-- Transparent background for all sprites except `room_topdown_640x360.png`.
+- Transparent background for all sprites except `room_topdown_960x540.png`.
 - If PixelLab exports with padding, trim to exact target size before final drop.

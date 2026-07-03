@@ -345,12 +345,17 @@ CEO: 'Consumers have never been more satisfied.'"
 
 ## 17. Visual
 
-**Palette:** oppressive kitchen-grunge
+**Palette:** oppressive kitchen-grunge — locked to the style board in
+`docs/style/` (`worn-out_palette-01.png` + refs). Cold olive/teal walls, warm
+single-lamp glow, bone-cream appliances, mustard money, rust-red danger.
 
-- Background: faded greens, dirty browns
-- Danger accent: saturated red
-- Money accent: dim yellow
-- UI text: bone white / pale yellow
+- Background / grime: shadow olive `#161a12`, `#1e2319`, `#3b4636`; forest olive `#505f3b`
+- Metal / trim: slate blue-green `#47534c`
+- Healthy / ok accent: muted olive green `#6e7b5a`
+- Danger accent: saturated rust-red `#bf4130` (with terracotta weathering `#ab4630`)
+- Money accent: mustard / ochre gold `#c7a24a`
+- Lighting accent: warm lamp glow `#f2c65a`
+- UI text: bone / cream `#e7e2cd`, dim `#9a9782`
 
 **Sprites 32×32 px** (aligned to 8px grid):
 

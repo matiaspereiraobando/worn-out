@@ -26,18 +26,18 @@ export class GameOverScene extends Phaser.Scene {
         .setTint(color)
         .setOrigin(origin);
 
-    text(20, "WORN OUT", CONFIG.font.sizeLg, c.text);
-    text(38, `"${result.causeText}"`, CONFIG.font.sizeSm, c.danger);
+    text(40, "WORN OUT", CONFIG.font.sizeLg, c.text);
+    text(66, `"${result.causeText}"`, CONFIG.font.sizeSm, c.danger);
 
-    this.add.rectangle(cx, 58, 280, 1, c.grime).setOrigin(0.5);
-    text(70, `HIGH SCORE: $${result.finalScore.toLocaleString()}`, CONFIG.font.sizeMd, c.money);
+    this.add.rectangle(cx, 92, 460, 1, c.grime).setOrigin(0.5);
+    text(112, `HIGH SCORE: $${result.finalScore.toLocaleString()}`, CONFIG.font.sizeMd, c.money);
     text(
-      84,
+      134,
       `raw $${result.rawScore.toLocaleString()}  ×  ${result.mult}  (${result.archetypeLabel})`,
       CONFIG.font.sizeSm,
       c.textDim,
     );
-    this.add.rectangle(cx, 96, 280, 1, c.grime).setOrigin(0.5);
+    this.add.rectangle(cx, 156, 460, 1, c.grime).setOrigin(0.5);
 
     const left =
       `Bills paid:      $${result.billsPaid}\n` +
@@ -56,24 +56,24 @@ export class GameOverScene extends Phaser.Scene {
       `Surges taken:   ${result.surgesTaken}`;
 
     this.add
-      .bitmapText(cx - 146, 108, CONFIG.font.key, left, CONFIG.font.sizeSm)
+      .bitmapText(cx - 230, 176, CONFIG.font.key, left, CONFIG.font.sizeSm)
       .setTint(c.text)
       .setOrigin(0, 0);
     this.add
-      .bitmapText(cx + 14, 108, CONFIG.font.key, right, CONFIG.font.sizeSm)
+      .bitmapText(cx + 30, 176, CONFIG.font.key, right, CONFIG.font.sizeSm)
       .setTint(c.text)
       .setOrigin(0, 0);
 
-    text(250, `PLAYER TYPE: "${result.archetypeLabel}"`, CONFIG.font.sizeSm, c.money);
-    text(266, PHRASES.manufacturer, CONFIG.font.sizeSm, c.textDim);
+    text(400, `PLAYER TYPE: "${result.archetypeLabel}"`, CONFIG.font.sizeSm, c.money);
+    text(420, PHRASES.manufacturer, CONFIG.font.sizeSm, c.textDim);
 
     const btn = this.add
-      .rectangle(cx, 326, 120, 22, c.panel)
+      .rectangle(cx, 470, 160, 30, c.panel)
       .setStrokeStyle(2, c.money)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     this.add
-      .bitmapText(cx, 322, CONFIG.font.key, "RETRY", CONFIG.font.sizeMd)
+      .bitmapText(cx, 466, CONFIG.font.key, "RETRY", CONFIG.font.sizeMd)
       .setTint(c.text)
       .setOrigin(0.5);
     btn.on("pointerover", () => btn.setFillStyle(c.grime));
@@ -82,6 +82,6 @@ export class GameOverScene extends Phaser.Scene {
     this.input.keyboard?.once("keydown-SPACE", () => this.scene.start("game"));
     this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("game"));
 
-    text(346, "[ click RETRY or press SPACE ]", CONFIG.font.sizeSm, c.textDim);
+    text(496, "[ click RETRY or press SPACE ]", CONFIG.font.sizeSm, c.textDim);
   }
 }

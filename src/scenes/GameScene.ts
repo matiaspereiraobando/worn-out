@@ -55,10 +55,10 @@ interface ActiveEvent {
 export class GameScene extends Phaser.Scene {
   private readonly order: ApplianceKey[] = ["fridge", "heater"];
   private readonly appliancePos: Record<ApplianceKey, { x: number; y: number }> = {
-    fridge: { x: 180, y: 200 },
-    heater: { x: 460, y: 200 },
+    fridge: { x: 280, y: 300 },
+    heater: { x: 680, y: 300 },
   };
-  private readonly doorPos = { x: 588, y: 182 };
+  private readonly doorPos = { x: 900, y: 250 };
 
   private appliances!: Record<ApplianceKey, Appliance | null>;
   private views!: Record<ApplianceKey, ApplianceView>;
@@ -99,12 +99,15 @@ export class GameScene extends Phaser.Scene {
   private hygieneBar!: Phaser.GameObjects.Rectangle;
   private hungerText!: Phaser.GameObjects.BitmapText;
   private hygieneText!: Phaser.GameObjects.BitmapText;
+  private moneyText!: Phaser.GameObjects.BitmapText;
+  private partsText!: Phaser.GameObjects.BitmapText;
   private hudText!: Phaser.GameObjects.BitmapText;
   private dayText!: Phaser.GameObjects.BitmapText;
   private logText!: Phaser.GameObjects.BitmapText;
   private eventBanner!: Phaser.GameObjects.Container;
   private eventText!: Phaser.GameObjects.BitmapText;
   private vendorText!: Phaser.GameObjects.BitmapText;
+  private surgeIcon?: Phaser.GameObjects.Sprite;
   private door!: Phaser.GameObjects.Rectangle;
   private doorSprite?: Phaser.GameObjects.Sprite;
   private vendorNpc!: Phaser.GameObjects.Sprite;
@@ -194,23 +197,32 @@ export class GameScene extends Phaser.Scene {
 
   private buildHud(): void {
     const c = CONFIG.colors;
-    const barW = 122;
-    const mkBar = (x: number, y: number, label: string, color: number) => {
-      this.bt(x, y - 10, label).setTint(c.text);
-      this.add.rectangle(x, y, barW, 8, c.panelDark).setStrokeStyle(1, c.grime).setOrigin(0, 0.5);
+    const hasIcons = this.textures.exists(ASSETS.sprites.icons.key);
+    const barW = CONFIG.hud.barW;
+    const mkBar = (x: number, y: number, color: number) => {
+      this.add.rectangle(x, y, barW, 10, c.panelDark).setStrokeStyle(1, c.grime).setOrigin(0, 0.5);
       const bar = this.add.rectangle(x + 1, y, barW - 2, 6, color).setOrigin(0, 0.5);
       const txt = this.bt(x + barW / 2, y, "").setOrigin(0.5).setTint(0x14140f);
       return { bar, txt };
     };
 
-    const h1 = mkBar(10, 28, "HUNGER", c.hunger);
-    const h2 = mkBar(146, 28, "HYGIENE", c.hygiene);
+    const h1 = mkBar(50, 32, c.hunger);
+    const h2 = mkBar(278, 32, c.hygiene);
     this.hungerBar = h1.bar;
     this.hygieneBar = h2.bar;
     this.hungerText = h1.txt;
     this.hygieneText = h2.txt;
-    this.hudText = this.bt(288, 10, "").setTint(c.text);
-    this.dayText = this.bt(CONFIG.width - 8, 10, "").setOrigin(1, 0).setTint(c.money);
+    if (hasIcons) {
+      this.add.sprite(12, 32, ASSETS.sprites.icons.key, 0).setOrigin(0, 0.5).setDisplaySize(32, 32);
+      this.add.sprite(240, 32, ASSETS.sprites.icons.key, 1).setOrigin(0, 0.5).setDisplaySize(32, 32);
+      this.add.sprite(480, 32, ASSETS.sprites.icons.key, 2).setOrigin(0, 0.5).setDisplaySize(32, 32);
+      this.add.sprite(600, 32, ASSETS.sprites.icons.key, 3).setOrigin(0, 0.5).setDisplaySize(32, 32);
+      this.add.sprite(810, 32, ASSETS.sprites.icons.key, 7).setOrigin(0, 0.5).setDisplaySize(32, 32);
+    }
+    this.moneyText = this.bt(516, 20, "", CONFIG.font.sizeMd).setTint(c.money);
+    this.partsText = this.bt(636, 20, "", CONFIG.font.sizeMd).setTint(c.text);
+    this.hudText = this.bt(712, 22, "").setTint(c.textDim);
+    this.dayText = this.bt(950, 12, "").setOrigin(1, 0).setTint(c.money);
   }
 
   private buildAppliances(): void {
@@ -226,24 +238,42 @@ export class GameScene extends Phaser.Scene {
 
   private buildDoor(): void {
     this.door = this.add
-      .rectangle(this.doorPos.x, this.doorPos.y, 30, 44, 0x564531)
+      .rectangle(this.doorPos.x, this.doorPos.y, 48, 48, 0x564531)
       .setStrokeStyle(2, CONFIG.colors.grime);
     if (this.textures.exists(ASSETS.sprites.door.key)) {
       this.doorSprite = this.add
         .sprite(this.doorPos.x, this.doorPos.y, ASSETS.sprites.door.key, 0)
-        .setDisplaySize(30, 44)
+        .setDisplaySize(48, 48)
         .setOrigin(0.5);
       this.door.setVisible(false);
     }
     this.bt(this.doorPos.x, this.doorPos.y - 28, "DOOR").setOrigin(0.5).setTint(CONFIG.colors.textDim);
-    const vendorTex = this.textures.exists(ASSETS.sprites.vendor.key)
-      ? ASSETS.sprites.vendor.key
-      : "fallback-vendor";
-    this.vendorNpc = this.add.sprite(this.doorPos.x + 26, this.doorPos.y + 4, vendorTex).setVisible(false).setDisplaySize(20, 28);
+    const hasVendor = this.textures.exists(ASSETS.sprites.vendor.key);
+    const hasCart = this.textures.exists(ASSETS.sprites.cart.key);
+    let vendorTex = "fallback-vendor";
+    let vendorW = 32;
+    let vendorH = 32;
+    let flipX = false;
+    if (hasVendor) {
+      vendorTex = ASSETS.sprites.vendor.key;
+      vendorW = 32;
+      vendorH = 32;
+    } else if (hasCart) {
+      vendorTex = ASSETS.sprites.cart.key;
+      vendorW = 32;
+      vendorH = 32;
+      // Source cart faces right; mirror it so it faces into the room.
+      flipX = true;
+    }
+    this.vendorNpc = this.add
+      .sprite(this.doorPos.x - 40, this.doorPos.y + 10, vendorTex)
+      .setVisible(false)
+      .setDisplaySize(vendorW, vendorH)
+      .setFlipX(flipX);
   }
 
   private buildPlayer(): void {
-    this.player = new Player(this, 320, 286);
+    this.player = new Player(this, 480, 430);
     if (this.textures.exists(ASSETS.sprites.player.key)) {
       this.player.setTextureKey(ASSETS.sprites.player.key);
     }
@@ -251,15 +281,15 @@ export class GameScene extends Phaser.Scene {
 
   private buildActionMenu(): void {
     const bg = this.add
-      .rectangle(0, 0, 150, 86, CONFIG.colors.panelDark)
+      .rectangle(0, 0, 200, 120, CONFIG.colors.panelDark)
       .setStrokeStyle(2, CONFIG.colors.warn)
       .setOrigin(0.5);
-    this.menuTitle = this.bt(0, -34, "", CONFIG.font.sizeMd).setOrigin(0.5).setTint(CONFIG.colors.text);
-    this.menuHint = this.bt(0, 31, "1-N select", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.textDim);
+    this.menuTitle = this.bt(0, -48, "", CONFIG.font.sizeMd).setOrigin(0.5).setTint(CONFIG.colors.text);
+    this.menuHint = this.bt(0, 44, "1-N select", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.textDim);
     this.menuContainer = this.add.container(0, 0, [bg, this.menuTitle, this.menuHint]).setVisible(false);
 
     for (let i = 0; i < 6; i++) {
-      const btn = new Button(this, 0, -16 + i * 12, 136, 10, "", () => this.triggerMenuOption(i));
+      const btn = new Button(this, 0, -24 + i * 16, 184, 12, "", () => this.triggerMenuOption(i));
       btn.setVisible(false);
       this.menuButtons.push(btn);
       this.menuContainer.add(btn.container);
@@ -267,7 +297,7 @@ export class GameScene extends Phaser.Scene {
 
     this.bt(
       CONFIG.width / 2,
-      CONFIG.height - 12,
+      CONFIG.height - 16,
       "WASD move  E interact  1-N action  P pickup",
       CONFIG.font.sizeSm,
     )
@@ -277,25 +307,36 @@ export class GameScene extends Phaser.Scene {
 
   private buildEventBanner(): void {
     const bg = this.add
-      .rectangle(0, 0, 338, 16, CONFIG.colors.panelDark)
+      .rectangle(0, 0, 520, 40, CONFIG.colors.panelDark)
       .setStrokeStyle(1, CONFIG.colors.danger)
       .setOrigin(0.5);
-    this.eventText = this.bt(-160, -4, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.danger).setOrigin(0, 0);
-    this.vendorText = this.bt(-160, 4, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.money).setOrigin(0, 0);
+    const hasIcons = this.textures.exists(ASSETS.sprites.icons.key);
+    if (hasIcons) {
+      this.surgeIcon = this.add
+        .sprite(-248, 0, ASSETS.sprites.icons.key, 6)
+        .setOrigin(0, 0.5)
+        .setDisplaySize(32, 32)
+        .setVisible(false);
+    }
+    this.eventText = this.bt(-240, -8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.danger).setOrigin(0, 0);
+    this.vendorText = this.bt(-240, 8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.money).setOrigin(0, 0);
+    const children: Phaser.GameObjects.GameObject[] = [bg];
+    if (this.surgeIcon) children.push(this.surgeIcon);
+    children.push(this.eventText, this.vendorText);
     this.eventBanner = this.add
-      .container(CONFIG.width / 2, CONFIG.world.hudHeight + 16, [bg, this.eventText, this.vendorText])
+      .container(CONFIG.width / 2, CONFIG.world.hudHeight + 28, children)
       .setVisible(false);
   }
 
   private buildLog(): void {
-    this.logText = this.bt(CONFIG.width / 2, CONFIG.height - 24, "").setOrigin(0.5).setTint(CONFIG.colors.textDim);
+    this.logText = this.bt(CONFIG.width / 2, CONFIG.height - 34, "").setOrigin(0.5).setTint(CONFIG.colors.textDim);
   }
 
   private buildPickups(): void {
     const hasCoinSprite = this.textures.exists(ASSETS.sprites.coin.key);
     for (let i = 0; i < CONFIG.pickups.count; i++) {
       const sprite = hasCoinSprite
-        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(12, 12)
+        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(32, 32)
         : this.add.circle(0, 0, 7, CONFIG.colors.money).setStrokeStyle(1, 0x8a7a2e);
       const label = this.bt(0, 0, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(0x14140f);
       const pickup: Pickup = { sprite, label, value: 0, active: false, respawnIn: 0 };
@@ -329,10 +370,10 @@ export class GameScene extends Phaser.Scene {
   private spawnPickup(p: Pickup): void {
     p.value = Phaser.Math.Between(CONFIG.pickups.minValue, CONFIG.pickups.maxValue);
     p.sprite.setPosition(
-      Phaser.Math.Between(20, CONFIG.width - 20),
-      Phaser.Math.Between(CONFIG.world.floorTop + 10, CONFIG.world.floorBottom - 12),
+      Phaser.Math.Between(30, CONFIG.width - 30),
+      Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24),
     );
-    p.label.setPosition(p.sprite.x, p.sprite.y - 4).setText(`${p.value}`);
+    p.label.setPosition(p.sprite.x, p.sprite.y - 20).setText(`${p.value}`);
     if (p.sprite instanceof Phaser.GameObjects.Sprite) {
       p.sprite.setFrame(Phaser.Math.Between(0, 1));
     }
@@ -459,7 +500,7 @@ export class GameScene extends Phaser.Scene {
     this.menuMode = "appliance";
     this.menuTargetAppliance = key;
     this.interactionPaused = false;
-    this.menuContainer.setPosition(this.views[key].worldX, this.views[key].worldY - 56).setVisible(true);
+    this.menuContainer.setPosition(this.views[key].worldX, this.views[key].worldY - 72).setVisible(true);
     this.refreshMenuOptions();
   }
 
@@ -467,7 +508,7 @@ export class GameScene extends Phaser.Scene {
     this.menuMode = "vendor";
     this.menuTargetAppliance = null;
     this.interactionPaused = true;
-    this.menuContainer.setPosition(this.doorPos.x - 6, this.doorPos.y - 56).setVisible(true);
+    this.menuContainer.setPosition(this.doorPos.x - 6, this.doorPos.y - 72).setVisible(true);
     this.refreshMenuOptions();
   }
 
@@ -750,15 +791,18 @@ export class GameScene extends Phaser.Scene {
 
   private updateEventBanner(): void {
     if (!this.activeEvent) {
+      this.surgeIcon?.setVisible(false);
       this.eventBanner.setVisible(false);
       return;
     }
     const t = Math.ceil(this.activeEvent.warningLeft);
     if (this.activeEvent.type === "surge") {
+      this.surgeIcon?.setVisible(true);
       const target = this.activeEvent.targetKey ? CONFIG.appliances[this.activeEvent.targetKey].label : "Machine";
       this.eventText.setText(`SURGE ${target.toUpperCase()} ${t}s`);
       this.vendorText.setText("Walk there and unplug in time.");
     } else {
+      this.surgeIcon?.setVisible(false);
       this.eventText.setText(`PRICE HIKE ${t}s`);
       this.vendorText.setText(`Next bill x${CONFIG.events.priceHike.billMultiplier}`);
     }
@@ -798,6 +842,7 @@ export class GameScene extends Phaser.Scene {
     } else if (this.vendorState === "warning") {
       this.vendorTimer -= dtReal;
       this.eventBanner.setVisible(true);
+      this.surgeIcon?.setVisible(false);
       this.vendorText.setText(`DON JOSE in ${Math.ceil(this.vendorTimer)}s`);
       if (this.vendorTimer <= 0) {
         this.vendorState = "open";
@@ -808,6 +853,7 @@ export class GameScene extends Phaser.Scene {
       this.vendorNpc.setVisible(true);
       if (!this.activeEvent) {
         this.eventBanner.setVisible(true);
+        this.surgeIcon?.setVisible(false);
         this.eventText.setText("DOOR ACTIVE");
         this.vendorText.setText(`Press E near door (${Math.ceil(this.vendorTimer)}s)`);
       }
@@ -826,14 +872,17 @@ export class GameScene extends Phaser.Scene {
   private refreshHud(): void {
     const hFrac = this.hunger / CONFIG.stats.hunger.max;
     const gFrac = this.hygiene / CONFIG.stats.hygiene.max;
-    this.hungerBar.width = Math.max(0, 120 * hFrac);
-    this.hygieneBar.width = Math.max(0, 120 * gFrac);
+    const barFillW = CONFIG.hud.barW - 2;
+    this.hungerBar.width = Math.max(0, barFillW * hFrac);
+    this.hygieneBar.width = Math.max(0, barFillW * gFrac);
     this.hungerBar.setFillStyle(hFrac < 0.25 ? CONFIG.colors.danger : CONFIG.colors.hunger);
     this.hygieneBar.setFillStyle(gFrac < 0.25 ? CONFIG.colors.danger : CONFIG.colors.hygiene);
     this.hungerText.setText(`${Math.ceil(this.hunger)}`);
     this.hygieneText.setText(`${Math.ceil(this.hygiene)}`);
 
-    this.hudText.setText(`$${this.money}  PARTS:${this.parts}  DEBT:${this.debt}/${CONFIG.gameOver.debtLimit}`);
+    this.moneyText.setText(`${this.money}`);
+    this.partsText.setText(`${this.parts}`);
+    this.hudText.setText(`DEBT ${this.debt}/${CONFIG.gameOver.debtLimit}`);
     this.dayText.setText(`DAY ${this.days + 1}\nBILL ${Math.ceil(this.dayTimer)}s${this.interactionPaused ? " PAUSE" : ""}`);
   }
 

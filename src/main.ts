@@ -18,7 +18,7 @@ const game = new Phaser.Game({
     roundPixels: true,
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.NONE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     autoRound: true,
   },

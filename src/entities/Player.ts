@@ -14,7 +14,6 @@ export class Player {
   setTextureKey(textureKey: string): void {
     if (this.scene.textures.exists(textureKey)) {
       this.sprite.setTexture(textureKey);
-      this.sprite.setDisplaySize(16, 16);
       this.sprite.setOrigin(0.5);
       this.sprite.setDepth(10);
     }
