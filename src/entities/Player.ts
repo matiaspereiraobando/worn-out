@@ -1,9 +1,16 @@
 import Phaser from "phaser";
 import { CONFIG } from "../config";
 
+type Facing = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
+
+const DIRS: Facing[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+const FRAMES_PER_ROW = 7;
+
 export class Player {
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly scene: Phaser.Scene;
+  private animated = false;
+  private facing: Facing = "S";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -16,6 +23,10 @@ export class Player {
       this.sprite.setTexture(textureKey);
       this.sprite.setOrigin(0.5);
       this.sprite.setDepth(10);
+      this.sprite.setScale(CONFIG.player.spriteScale);
+      this.animated = true;
+      this.ensureWalkAnimations(textureKey);
+      this.setIdleFrame(this.facing);
     }
   }
 
@@ -31,6 +42,55 @@ export class Player {
     this.sprite.x += dx * speed * dt;
     this.sprite.y += dy * speed * dt;
     this.clampToWorld();
+    this.updateAnimation(vx, vy);
+  }
+
+  private ensureWalkAnimations(textureKey: string): void {
+    DIRS.forEach((dir, row) => {
+      const key = `player-walk-${dir}`;
+      if (this.scene.anims.exists(key)) return;
+      this.scene.anims.create({
+        key,
+        frames: this.scene.anims.generateFrameNumbers(textureKey, {
+          start: row * FRAMES_PER_ROW + 1,
+          end: row * FRAMES_PER_ROW + 6,
+        }),
+        frameRate: CONFIG.player.walkFps,
+        repeat: -1,
+      });
+    });
+  }
+
+  private setIdleFrame(dir: Facing): void {
+    const row = DIRS.indexOf(dir);
+    this.sprite.setFrame(row * FRAMES_PER_ROW);
+  }
+
+  private directionFromInput(vx: number, vy: number): Facing {
+    if (vy < 0) {
+      if (vx < 0) return "NW";
+      if (vx > 0) return "NE";
+      return "N";
+    }
+    if (vy > 0) {
+      if (vx < 0) return "SW";
+      if (vx > 0) return "SE";
+      return "S";
+    }
+    if (vx < 0) return "W";
+    return "E";
+  }
+
+  private updateAnimation(vx: number, vy: number): void {
+    if (!this.animated) return;
+    if (vx === 0 && vy === 0) {
+      this.sprite.anims.stop();
+      this.setIdleFrame(this.facing);
+      return;
+    }
+
+    this.facing = this.directionFromInput(vx, vy);
+    this.sprite.anims.play(`player-walk-${this.facing}`, true);
   }
 
   private clampToWorld(): void {

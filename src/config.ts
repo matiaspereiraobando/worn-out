@@ -187,6 +187,7 @@ export const CONFIG = {
     // Slice offer: cheap parts to keep the repair economy alive.
     partsPrice: 6,
     partsBundle: 2,
+    spriteScale: 2,
   },
 
   /** Starting resources. */
@@ -217,7 +218,9 @@ export const CONFIG = {
   player: {
     speed: 132,
     w: 20,
-    h: 20,
+    h: 32,
+    walkFps: 10,
+    spriteScale: 2,
   },
 
   world: {

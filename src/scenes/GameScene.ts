@@ -238,26 +238,29 @@ export class GameScene extends Phaser.Scene {
 
   private buildDoor(): void {
     this.door = this.add
-      .rectangle(this.doorPos.x, this.doorPos.y, 48, 48, 0x564531)
+      .rectangle(this.doorPos.x, this.doorPos.y, 72, 72, 0x564531)
       .setStrokeStyle(2, CONFIG.colors.grime);
     if (this.textures.exists(ASSETS.sprites.door.key)) {
       this.doorSprite = this.add
         .sprite(this.doorPos.x, this.doorPos.y, ASSETS.sprites.door.key, 0)
-        .setDisplaySize(48, 48)
+        .setDisplaySize(72, 72)
         .setOrigin(0.5);
       this.door.setVisible(false);
     }
-    this.bt(this.doorPos.x, this.doorPos.y - 28, "DOOR").setOrigin(0.5).setTint(CONFIG.colors.textDim);
+    this.bt(this.doorPos.x, this.doorPos.y - 42, "DOOR").setOrigin(0.5).setTint(CONFIG.colors.textDim);
     const hasVendor = this.textures.exists(ASSETS.sprites.vendor.key);
     const hasCart = this.textures.exists(ASSETS.sprites.cart.key);
     let vendorTex = "fallback-vendor";
     let vendorW = 32;
     let vendorH = 32;
     let flipX = false;
+    let vendorFrame: number | undefined;
     if (hasVendor) {
       vendorTex = ASSETS.sprites.vendor.key;
-      vendorW = 32;
-      vendorH = 32;
+      vendorW = 64 * CONFIG.vendor.spriteScale;
+      vendorH = 64 * CONFIG.vendor.spriteScale;
+      vendorFrame = 2; // Sheet order S,N,W,E -> face into the room (W).
+      flipX = false;
     } else if (hasCart) {
       vendorTex = ASSETS.sprites.cart.key;
       vendorW = 32;
@@ -266,7 +269,7 @@ export class GameScene extends Phaser.Scene {
       flipX = true;
     }
     this.vendorNpc = this.add
-      .sprite(this.doorPos.x - 40, this.doorPos.y + 10, vendorTex)
+      .sprite(this.doorPos.x - 40, this.doorPos.y + 10, vendorTex, vendorFrame)
       .setVisible(false)
       .setDisplaySize(vendorW, vendorH)
       .setFlipX(flipX);
@@ -336,7 +339,7 @@ export class GameScene extends Phaser.Scene {
     const hasCoinSprite = this.textures.exists(ASSETS.sprites.coin.key);
     for (let i = 0; i < CONFIG.pickups.count; i++) {
       const sprite = hasCoinSprite
-        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(32, 32)
+        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(16, 16)
         : this.add.circle(0, 0, 7, CONFIG.colors.money).setStrokeStyle(1, 0x8a7a2e);
       const label = this.bt(0, 0, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(0x14140f);
       const pickup: Pickup = { sprite, label, value: 0, active: false, respawnIn: 0 };

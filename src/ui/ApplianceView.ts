@@ -18,8 +18,8 @@ export class ApplianceView {
   private readonly selectionRing: Phaser.GameObjects.Rectangle;
   private blinkT = 0;
 
-  static readonly W = 48;
-  static readonly H = 48;
+  static readonly W = 72;
+  static readonly H = 72;
 
   constructor(scene: Phaser.Scene, x: number, y: number, label: string, spriteKey?: string) {
     this.scene = scene;
@@ -31,7 +31,7 @@ export class ApplianceView {
       .setStrokeStyle(2, CONFIG.colors.grime)
       .setOrigin(0.5);
     if (spriteKey && this.scene.textures.exists(spriteKey)) {
-      this.sprite = scene.add.sprite(0, 0, spriteKey, 0).setDisplaySize(48, 48).setOrigin(0.5);
+      this.sprite = scene.add.sprite(0, 0, spriteKey, 0).setDisplaySize(72, 72).setOrigin(0.5);
       this.body.setVisible(false);
     }
 

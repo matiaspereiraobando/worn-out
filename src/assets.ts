@@ -6,11 +6,11 @@ export const ASSETS = {
   },
   sprites: {
     room: { key: "room-bg", path: "assets/sprites/world/room_topdown_960x540.png" },
-    player: { key: "player-sheet", path: "assets/sprites/character/player_topdown_32x32_sheet.png" },
+    player: { key: "player-sheet", path: "assets/sprites/character/player_topdown_8dir_60x60_sheet.png" },
     fridge: { key: "fridge-states", path: "assets/sprites/appliances/fridge_states_48x48.png" },
     heater: { key: "heater-states", path: "assets/sprites/appliances/heater_states_48x48.png" },
     door: { key: "door-states", path: "assets/sprites/world/door_states_48x48.png" },
-    vendor: { key: "vendor", path: "assets/sprites/props/vendor_don_jose_32x48.png" },
+    vendor: { key: "vendor", path: "assets/sprites/props/vendor_don_jose_4dir_64x64_sheet.png" },
     coin: { key: "coin-strip", path: "assets/sprites/props/coin_32x32_strip.png" },
     icons: { key: "ui-icons", path: "assets/sprites/ui/icons_32x32_sheet.png" },
     cart: { key: "vendor-cart", path: "assets/sprites/props/vendor_cart_32x32.png" },

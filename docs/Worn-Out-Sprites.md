@@ -51,14 +51,14 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 
 ### 2) Player character spritesheet
 
-- **Path:** `public/assets/sprites/character/player_topdown_8dir_32x32_sheet.png`
-- **Size:** `128x128` (4 columns x 4 rows of `32x32`)
+- **Path:** `public/assets/sprites/character/player_topdown_8dir_60x60_sheet.png`
+- **Size:** `420x480` (7 columns x 8 rows of `60x60`)
 - **Frames layout:**
-  - 8 facings total: `N, NE, E, SE, S, SW, W, NW`
-  - For each facing, provide `idle + walk` (2 frames)
-  - Current packed layout target: 16 frames total, arranged on a `4x4` sheet
+  - 8 rows total, one direction per row in order: `N, NE, E, SE, S, SW, W, NW`
+  - 7 frames per row: frame 1 = idle, frames 2-7 = walk loop
+  - Character is centered in an effective `20x32` gameplay hitbox inside each `60x60` frame
 - **Prompt:**
-  > Pixel art top-down human character for gloomy apartment survival game, 32x32 per frame, spritesheet 128x128, 8 directional facings (N, NE, E, SE, S, SW, W, NW), each facing has idle + walk frame (16 frames total), simple readable silhouette, tired posture, worn muted clothes (faded olive-green shirt, dark slate trousers, bone-grey undershirt) with a small rust-red accent, transparent background, no anti-aliasing, palette olive-green + slate + bone with rust accent to match grimy apartment.
+  > Pixel art top-down human character for gloomy apartment survival game, 60x60 per frame, spritesheet 420x480 with 8 directional rows (N, NE, E, SE, S, SW, W, NW), each row with 7 frames (idle + 6-frame walk cycle), simple readable silhouette, tired posture, worn muted clothes (faded olive-green shirt, dark slate trousers, bone-grey undershirt) with a small rust-red accent, transparent background, no anti-aliasing, palette olive-green + slate + bone with rust accent to match grimy apartment.
 
 ### 3) Fridge states
 
@@ -86,11 +86,12 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 
 ### 6) Don Jose vendor
 
-- **Path:** `public/assets/sprites/props/vendor_don_jose_4dir_32x32_sheet.png`
-- **Size:** `128x32` (4 frames horizontally, each `32x32`)
-- **Frames:** 4 idle facings `down, up, left, right` (no walk cycle)
+- **Path:** `public/assets/sprites/props/vendor_don_jose_4dir_64x64_sheet.png`
+- **Size:** `256x64` (4 frames horizontally, each `64x64`)
+- **Frames:** 4 idle facings in order `S, N, W, E` (no walk cycle)
+- **Gameplay note:** character is centered in an effective `20x32` gameplay hitbox inside each `64x64` frame
 - **Prompt:**
-  > Top-down 3-4 pixel art handyman vendor character, grimy mustard/ochre overalls over a bone undershirt, rust-red cap, awkward friendly smile, slightly shady vibe, 32x32 per frame, 4 idle facings only (down/up/left/right), no walk cycle, transparent background, no anti-aliasing, readable silhouette, palette mustard + rust + bone + olive to match grimy apartment.
+  > Top-down 3-4 pixel art handyman vendor character, grimy mustard/ochre overalls over a bone undershirt, rust-red cap, awkward friendly smile, slightly shady vibe, 64x64 per frame, 4 idle facings only in order S/N/W/E, no walk cycle, transparent background, no anti-aliasing, readable silhouette, palette mustard + rust + bone + olive to match grimy apartment.
 
 ### 7) Tool cart prop (optional but recommended)
 

@@ -17,8 +17,8 @@ export class BootScene extends Phaser.Scene {
     // Asset-manifest wiring for real art (404-safe; fallbacks are generated in create).
     this.load.image(ASSETS.sprites.room.key, ASSETS.sprites.room.path);
     this.load.spritesheet(ASSETS.sprites.player.key, ASSETS.sprites.player.path, {
-      frameWidth: 32,
-      frameHeight: 32,
+      frameWidth: 60,
+      frameHeight: 60,
     });
     this.load.spritesheet(ASSETS.sprites.fridge.key, ASSETS.sprites.fridge.path, {
       frameWidth: 48,
@@ -32,7 +32,10 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 48,
       frameHeight: 48,
     });
-    this.load.image(ASSETS.sprites.vendor.key, ASSETS.sprites.vendor.path);
+    this.load.spritesheet(ASSETS.sprites.vendor.key, ASSETS.sprites.vendor.path, {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
     this.load.image(ASSETS.sprites.cart.key, ASSETS.sprites.cart.path);
     this.load.spritesheet(ASSETS.sprites.coin.key, ASSETS.sprites.coin.path, {
       frameWidth: 32,
