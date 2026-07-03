@@ -14,6 +14,7 @@ interface ActionOption {
   label: string;
   enabled: boolean;
   action: () => void;
+  cooldown?: () => number;
 }
 
 export interface RunResult {
@@ -289,7 +290,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.menuTitle = this.bt(0, -48, "", CONFIG.font.sizeMd).setOrigin(0.5).setTint(CONFIG.colors.text);
     this.menuHint = this.bt(0, 44, "1-N select", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.textDim);
-    this.menuContainer = this.add.container(0, 0, [bg, this.menuTitle, this.menuHint]).setVisible(false);
+    this.menuContainer = this.add.container(0, 0, [bg, this.menuTitle, this.menuHint]).setVisible(false).setDepth(1000);
 
     for (let i = 0; i < 6; i++) {
       const btn = new Button(this, 0, -24 + i * 16, 184, 12, "", () => this.triggerMenuOption(i));
@@ -321,8 +322,8 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(32, 32)
         .setVisible(false);
     }
-    this.eventText = this.bt(-240, -8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.danger).setOrigin(0, 0);
-    this.vendorText = this.bt(-240, 8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.money).setOrigin(0, 0);
+    this.eventText = this.bt(-204, -8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.danger).setOrigin(0, 0);
+    this.vendorText = this.bt(-204, 8, "", CONFIG.font.sizeSm).setTint(CONFIG.colors.money).setOrigin(0, 0);
     const children: Phaser.GameObjects.GameObject[] = [bg];
     if (this.surgeIcon) children.push(this.surgeIcon);
     children.push(this.eventText, this.vendorText);
@@ -424,6 +425,7 @@ export class GameScene extends Phaser.Scene {
 
     this.updateNearestAppliance();
     this.updateMenuValidity();
+    if (this.menuMode === "appliance" && this.menuContainer.visible) this.refreshMenuOptions();
     this.order.forEach((key) => this.views[key].update(this.appliances[key], dtReal));
     this.refreshHud();
     if (dt > 0) this.checkGameOver();
@@ -567,6 +569,7 @@ export class GameScene extends Phaser.Scene {
             enabled:
               this.money >= CONFIG.actions.clean.moneyCost && (a.cleanCooldownSec ?? 1) <= 0,
             action: () => this.doClean(key),
+            cooldown: () => a.cleanCooldownSec / CONFIG.actions.clean.cooldownSec,
           },
           {
             label: a.plugged ? "Unplug" : "Plug",
@@ -577,6 +580,7 @@ export class GameScene extends Phaser.Scene {
             label: `Scrap (+${a.scrapYield()}p)`,
             enabled: a.canScrap(),
             action: () => this.doCannibalize(key),
+            cooldown: () => a.scrapLockSec / CONFIG.actions.buyNew.scrapLockSec,
           },
         ];
       }
@@ -591,6 +595,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       btn.setVisible(true).setText(`${i + 1}. ${opt.label}`).setEnabled(opt.enabled);
+      btn.setCooldown(opt.cooldown ? opt.cooldown() : 0);
       btn.setHandler(() => this.triggerMenuOption(i));
     });
   }
