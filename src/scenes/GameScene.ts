@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { PHRASES } from "../phrases";
 import { Player } from "../entities/Player";
 import { WalkMask } from "../model/WalkMask";
+import { playerHitboxSamples } from "../playerHitbox";
 import { ASSETS } from "../assets";
 
 type GameOverCause = "hunger" | "hygiene" | "debt" | "uninhabitable";
@@ -35,6 +36,7 @@ export interface RunResult {
   cleans: number;
   scraps: number;
   buys: number;
+  washes: number;
   unplugActions: number;
   surgesDodged: number;
   surgesTaken: number;
@@ -55,12 +57,14 @@ interface ActiveEvent {
 }
 
 export class GameScene extends Phaser.Scene {
-  private readonly order: ApplianceKey[] = ["fridge", "heater"];
-  private readonly appliancePos: Record<ApplianceKey, { x: number; y: number }> = {
-    fridge: { x: 280, y: 300 },
-    heater: { x: 680, y: 300 },
+  private readonly order: ApplianceKey[] = ["fridge", "heater", "washer"];
+  private readonly appliancePos: Record<ApplianceKey, { x: number; y: number }> = CONFIG.layout.appliances;
+  private readonly applianceSpriteKeys: Record<ApplianceKey, string> = {
+    fridge: ASSETS.sprites.fridge.key,
+    heater: ASSETS.sprites.heater.key,
+    washer: ASSETS.sprites.washer.key,
   };
-  private readonly doorPos = { x: 900, y: 250 };
+  private readonly doorPos = CONFIG.layout.door;
 
   private appliances!: Record<ApplianceKey, Appliance | null>;
   private views!: Record<ApplianceKey, ApplianceView>;
@@ -78,6 +82,7 @@ export class GameScene extends Phaser.Scene {
 
   private meals = 0;
   private showers = 0;
+  private washes = 0;
   private repairs = 0;
   private cleans = 0;
   private scraps = 0;
@@ -123,6 +128,16 @@ export class GameScene extends Phaser.Scene {
   private menuTargetAppliance: ApplianceKey | null = null;
   private menuOptions: ActionOption[] = [];
 
+  private washing = false;
+  private washTimeLeft = 0;
+  private washNeedle = 0;
+  private washDir = 1;
+  private washGreenStart = 0;
+  private washUI!: Phaser.GameObjects.Container;
+  private washGreenZone!: Phaser.GameObjects.Rectangle;
+  private washNeedleRect!: Phaser.GameObjects.Rectangle;
+  private washTimerText!: Phaser.GameObjects.BitmapText;
+
   private keyW!: Phaser.Input.Keyboard.Key;
   private keyA!: Phaser.Input.Keyboard.Key;
   private keyS!: Phaser.Input.Keyboard.Key;
@@ -145,6 +160,7 @@ export class GameScene extends Phaser.Scene {
     this.buildPlayer();
     this.player.setWalkable((x, y) => this.canPlayerStandAt(x, y));
     this.buildActionMenu();
+    this.buildWashUI();
     this.buildEventBanner();
     this.buildLog();
     this.buildPickups();
@@ -157,6 +173,7 @@ export class GameScene extends Phaser.Scene {
     this.appliances = {
       fridge: new Appliance("fridge"),
       heater: new Appliance("heater"),
+      washer: new Appliance("washer"),
     };
     this.money = CONFIG.start.money;
     this.parts = CONFIG.start.parts;
@@ -166,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     this.hunger = CONFIG.stats.hunger.start;
     this.hygiene = CONFIG.stats.hygiene.start;
     this.meals = this.showers = this.repairs = this.cleans = 0;
+    this.washes = 0;
     this.scraps = this.buys = this.unplugActions = this.surgesDodged = this.surgesTaken = this.days = 0;
     this.dayTimer = CONFIG.bills.dayLengthSec;
     this.nextEventIn = CONFIG.events.firstEventDelaySec;
@@ -180,6 +198,10 @@ export class GameScene extends Phaser.Scene {
     this.nearestAppliance = null;
     this.menuMode = "none";
     this.menuTargetAppliance = null;
+    this.washing = false;
+    this.washTimeLeft = 0;
+    this.washNeedle = 0;
+    this.washDir = 1;
   }
 
   private bt(x: number, y: number, text: string, size: number = CONFIG.font.sizeSm): Phaser.GameObjects.BitmapText {
@@ -235,10 +257,31 @@ export class GameScene extends Phaser.Scene {
     this.order.forEach((key) => {
       const def = CONFIG.appliances[key];
       const pos = this.appliancePos[key];
-      const spriteKey = key === "fridge" ? ASSETS.sprites.fridge.key : ASSETS.sprites.heater.key;
+      const spriteKey = this.applianceSpriteKeys[key];
       const view = new ApplianceView(this, pos.x, pos.y, def.label.toUpperCase(), spriteKey);
       this.views[key] = view;
     });
+  }
+
+  private buildWashUI(): void {
+    const w = CONFIG.actions.wash;
+    const barW = w.barW;
+    const bg = this.add
+      .rectangle(0, 0, barW, 12, CONFIG.colors.panelDark)
+      .setStrokeStyle(1, CONFIG.colors.grime)
+      .setOrigin(0.5);
+    this.washGreenZone = this.add
+      .rectangle(0, 0, barW * w.greenZoneFrac, 10, CONFIG.colors.ok, 0.45)
+      .setOrigin(0, 0.5);
+    this.washNeedleRect = this.add.rectangle(0, 0, 3, 14, CONFIG.colors.danger).setOrigin(0.5);
+    this.washTimerText = this.bt(0, -16, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.text);
+    const hint = this.bt(0, 16, "Press E in green zone", CONFIG.font.sizeSm)
+      .setOrigin(0.5)
+      .setTint(CONFIG.colors.textDim);
+    this.washUI = this.add
+      .container(0, 0, [bg, this.washGreenZone, this.washNeedleRect, this.washTimerText, hint])
+      .setVisible(false)
+      .setDepth(1000);
   }
 
   private buildDoor(): void {
@@ -281,7 +324,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildPlayer(): void {
-    this.player = new Player(this, 480, 430);
+    this.player = new Player(this, CONFIG.layout.playerStart.x, CONFIG.layout.playerStart.y);
     if (this.textures.exists(ASSETS.sprites.player.key)) {
       this.player.setTextureKey(ASSETS.sprites.player.key);
     }
@@ -420,6 +463,7 @@ export class GameScene extends Phaser.Scene {
 
     const dtReal = deltaMs / 1000;
     this.handleInput(dtReal);
+    if (this.washing) this.tickWash(dtReal);
     this.tickVendor(dtReal);
     const dt = this.interactionPaused ? 0 : dtReal;
 
@@ -449,7 +493,10 @@ export class GameScene extends Phaser.Scene {
     this.player.move(vx, vy, dt);
 
     if (Phaser.Input.Keyboard.JustDown(this.keyP)) this.collectPickupsInRange();
-    if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.interact();
+    if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      if (this.washing) this.resolveWash(true);
+      else this.interact();
+    }
 
     this.keyNums.forEach((k, i) => {
       if (Phaser.Input.Keyboard.JustDown(k)) this.triggerMenuOption(i);
@@ -509,36 +556,9 @@ export class GameScene extends Phaser.Scene {
     return Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, this.doorPos.x, this.doorPos.y);
   }
 
-  /**
-   * Validates a small player footprint, not just a single center point.
-   * This prevents directional bleed-through on mask edges (notably while moving down).
-   */
   private canPlayerStandAt(x: number, y: number): boolean {
     if (!this.walkMask.available) return true;
-    // Use a feet-biased footprint instead of full body bounds.
-    // In top-down art, the upper body/head can overlap props/walls visually,
-    // but the feet should define actual walkability.
-    const halfW = Math.max(3, CONFIG.player.w * 0.42);
-    const footY = y + CONFIG.player.h * 0.32;
-    // Asymmetric vertical probe: permissive above, strict below.
-    const top = Math.max(2, CONFIG.player.h * 0.14);
-    const bottom = Math.max(4, CONFIG.player.h * 0.34);
-    const samples: Array<[number, number]> = [
-      [x, footY],
-      [x - halfW, footY],
-      [x + halfW, footY],
-      [x, footY - top],
-      [x, footY + bottom],
-      [x - halfW, footY - top],
-      [x + halfW, footY - top],
-      [x - halfW, footY + bottom],
-      [x + halfW, footY + bottom],
-      // Extra lower samples prevent slight downwards bleed-through on tight edges.
-      [x, footY + bottom + 2],
-      [x - halfW * 0.55, footY + bottom + 2],
-      [x + halfW * 0.55, footY + bottom + 2],
-    ];
-    return samples.every(([sx, sy]) => this.walkMask.isWalkable(sx, sy));
+    return playerHitboxSamples(x, y).every(([sx, sy]) => this.walkMask.isWalkable(sx, sy));
   }
 
   private openApplianceMenu(key: ApplianceKey): void {
@@ -593,11 +613,16 @@ export class GameScene extends Phaser.Scene {
           },
         ];
       } else {
+        const isWasher = key === "washer";
         options = [
           {
             label: `${a.useActionLabel}`,
-            enabled: a.alive && a.plugged,
-            action: () => this.doUse(key),
+            enabled:
+              a.alive && a.plugged && !this.washing && (!isWasher || a.washCooldownSec <= 0),
+            action: () => (isWasher ? this.startWash(key) : this.doUse(key)),
+            cooldown: isWasher
+              ? () => a.washCooldownSec / CONFIG.actions.wash.cooldownSec
+              : undefined,
           },
           {
             label: `Repair (${CONFIG.actions.repair.partsCost}p)`,
@@ -655,11 +680,72 @@ export class GameScene extends Phaser.Scene {
     if (a.stat === "hunger") {
       this.hunger = Math.min(CONFIG.stats.hunger.max, this.hunger + CONFIG.stats.hunger.restoreOnUse);
       this.meals++;
-    } else {
+    } else if (a.stat === "hygiene") {
       this.hygiene = Math.min(CONFIG.stats.hygiene.max, this.hygiene + CONFIG.stats.hygiene.restoreOnUse);
       this.showers++;
     }
     this.log(PHRASES.onUse);
+  }
+
+  private startWash(key: ApplianceKey): void {
+    if (this.gameEnded || this.interactionPaused || this.washing) return;
+    const a = this.appliances[key];
+    if (!a || key !== "washer" || a.washCooldownSec > 0 || !a.use()) return;
+
+    a.washCooldownSec = CONFIG.actions.wash.cooldownSec;
+    this.closeMenu();
+    const w = CONFIG.actions.wash;
+    this.washing = true;
+    this.washTimeLeft = w.cycleSec;
+    this.washNeedle = 0;
+    this.washDir = 1;
+    this.washGreenStart = Math.random() * (1 - w.greenZoneFrac);
+    const view = this.views[key];
+    this.washUI.setPosition(view.worldX, view.worldY - 90).setVisible(true);
+    this.updateWashVisuals();
+  }
+
+  private tickWash(dt: number): void {
+    const w = CONFIG.actions.wash;
+    this.washNeedle += this.washDir * w.sweepsPerSec * dt;
+    if (this.washNeedle >= 1) {
+      this.washNeedle = 1;
+      this.washDir = -1;
+    } else if (this.washNeedle <= 0) {
+      this.washNeedle = 0;
+      this.washDir = 1;
+    }
+    this.washTimeLeft -= dt;
+    this.updateWashVisuals();
+    if (this.washTimeLeft <= 0) this.resolveWash(false);
+  }
+
+  private updateWashVisuals(): void {
+    const w = CONFIG.actions.wash;
+    const barW = w.barW;
+    const half = barW / 2;
+    this.washGreenZone.width = barW * w.greenZoneFrac;
+    this.washGreenZone.x = -half + this.washGreenStart * barW;
+    this.washNeedleRect.x = -half + this.washNeedle * barW;
+    this.washTimerText.setText(`${Math.ceil(Math.max(0, this.washTimeLeft))}s`);
+  }
+
+  private resolveWash(pressed: boolean): void {
+    if (!this.washing) return;
+    const w = CONFIG.actions.wash;
+    const inZone =
+      this.washNeedle >= this.washGreenStart &&
+      this.washNeedle <= this.washGreenStart + w.greenZoneFrac;
+    if (pressed && inZone) {
+      this.money += w.reward;
+      this.washes++;
+      this.log(PHRASES.onWashSuccess);
+      this.refreshHud();
+    } else {
+      this.log(PHRASES.onWashFail);
+    }
+    this.washing = false;
+    this.washUI.setVisible(false);
   }
 
   private doRepair(key: ApplianceKey): void {
@@ -969,6 +1055,8 @@ export class GameScene extends Phaser.Scene {
 
   private endGame(cause: GameOverCause): void {
     this.gameEnded = true;
+    this.washing = false;
+    this.washUI?.setVisible(false);
     this.closeMenu();
 
     let archetypeLabel: string;
@@ -998,6 +1086,7 @@ export class GameScene extends Phaser.Scene {
       days: this.days,
       meals: this.meals,
       showers: this.showers,
+      washes: this.washes,
       repairs: this.repairs,
       cleans: this.cleans,
       scraps: this.scraps,

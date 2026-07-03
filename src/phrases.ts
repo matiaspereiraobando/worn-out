@@ -19,6 +19,8 @@ export const PHRASES = {
   onVendorBuy: "Don José: 'Come back soon.' (He knows you will.)",
   onVendorLeave: "Don José left. He'll be back. They always come back.",
   onBuyNew: "You did it! A brand new machine. Same model. Same problems.",
+  onWashSuccess: "Spin cycle nailed. $15 and a warm hum of compliance.",
+  onWashFail: "Off-balance. The drum shudders; no payout today.",
   onBill: (amount: number) => `Bill of the day: $${amount}. Pay up, or...`,
   onDebt: "You couldn't cover it. The difference is now debt. It compounds, spiritually.",
   gameOver: {

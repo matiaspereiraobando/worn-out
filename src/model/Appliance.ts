@@ -9,7 +9,7 @@ export type ApplianceVisualState = "normal" | "cracked" | "blinking" | "dead";
 export class Appliance {
   readonly key: ApplianceKey;
   readonly label: string;
-  readonly stat: StatKey;
+  readonly stat?: StatKey;
   readonly critical: boolean;
   readonly maxHp: number;
   readonly passiveDecayPerSec: number;
@@ -23,6 +23,8 @@ export class Appliance {
   cleanBuffSec = 0;
   /** Seconds of remaining clean cooldown. */
   cleanCooldownSec = 0;
+  /** Seconds until the washer can start another wash cycle. */
+  washCooldownSec = 0;
   /** Seconds until this appliance can be cannibalized (anti-arbitrage). */
   scrapLockSec = 0;
 
@@ -30,7 +32,7 @@ export class Appliance {
     const def = CONFIG.appliances[key];
     this.key = key;
     this.label = def.label;
-    this.stat = def.stat;
+    this.stat = "stat" in def ? (def.stat as StatKey) : undefined;
     this.critical = def.critical;
     this.maxHp = def.maxHp;
     this.passiveDecayPerSec = def.passiveDecayPerSec;
@@ -54,6 +56,7 @@ export class Appliance {
   /** Advance timers and passive decay. dt in seconds. */
   tick(dt: number): void {
     if (this.cleanCooldownSec > 0) this.cleanCooldownSec = Math.max(0, this.cleanCooldownSec - dt);
+    if (this.washCooldownSec > 0) this.washCooldownSec = Math.max(0, this.washCooldownSec - dt);
     if (this.scrapLockSec > 0) this.scrapLockSec = Math.max(0, this.scrapLockSec - dt);
     if (!this.alive) return;
     if (!this.plugged) return;

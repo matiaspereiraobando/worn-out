@@ -155,6 +155,7 @@ export class ApplianceView {
     if (!appliance.alive) bits.push("DEAD");
     if (!appliance.plugged && !this.plugIcon) bits.push("UNPLUG");
     if (appliance.cleanBuffSec > 0) bits.push(`C${appliance.cleanBuffSec.toFixed(0)}s`);
+    if (appliance.washCooldownSec > 0) bits.push(`W${appliance.washCooldownSec.toFixed(0)}s`);
     if (appliance.scrapLockSec > 0) bits.push(`S${appliance.scrapLockSec.toFixed(0)}s`);
     this.status.setText(bits.join(" "));
     if (this.plugIcon) {

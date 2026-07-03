@@ -22,7 +22,7 @@ This version reflects decisions made when the slice was implemented. Key changes
 - **Pixel rendering hardened:** bitmap pixel font + anti-alias disabled + rounded pixel scaling.
 - **Clean now costs money** (`$5`) instead of a rag item (inventory simplification). See §8.
 - **All balance numbers live in one `src/config.ts`** so the whole game retunes in one place.
-- **Vertical-slice scope** for the first build: 2 appliances (fridge, water heater) + 2 stats (hunger, hygiene). Stove/mood and washing machine are deferred. See §19.
+- **Vertical-slice scope** for the first build: 2 appliances (fridge, water heater) + 2 stats (hunger, hygiene). Stove/mood deferred; **washing machine + mini-cycle now in build** (post-slice expansion). See §19.
 - **Target run length** raised to ~2–4 min with at least one appliance-death crisis (was "survive 60s"). See §22.
 
 ---
@@ -116,7 +116,7 @@ All values live in `src/config.ts` (`stats.*`).
 | **Fridge** | yes | Eat | 0.8 HP/s (~125s) | −9 HP / eat | ✅ | — |
 | **Water heater** | yes | Hot shower | 0.9 HP/s (~110s) | −13 HP / shower | ✅ | — |
 | **Stove** | yes | Cook | 0.7 HP/s | −11 HP / cook | ⏳ post-slice | — |
-| **Washing machine** | no | Wash clothes | 0.2 HP/s | cycle | ⏳ post-slice | Wash = +$15 |
+| **Washing machine** | no | Wash clothes | 0.2 HP/s | cycle | ✅ (mini-cycle) | Wash = +$15 |
 
 **Visual state:**
 
@@ -230,7 +230,7 @@ One action only: **Clean**.
 ## 11. Side-tasks
 
 - **Passive pickups (in slice):** 5 coins on the floor at a time, press `P` near them to collect, +$3-7 each, respawn every 6-12s. This is the main income that funds repairs and bills.
-- **Washing machine mini-cycle (post-slice):** an 8s cycle with a timing mini-challenge. +$15 on success. Ships with the washing machine after the slice.
+- **Washing machine mini-cycle:** 8s timing challenge at the washer; +$15 on success (implemented).
 
 ---
 
@@ -487,7 +487,7 @@ single-lamp glow, bone-cream appliances, mustard money, rust-red danger.
 - Score + 3 archetypes, all 3 game-over vectors, end screen with variable text
 - Placeholder shape-art (real pixel sprites layered in after the loop feels right)
 
-**Expand after the slice is fun:** stove + mood, washing machine + mini-cycle, tiered parts, pixel sprites, SFX, price-hike prepaid mitigation.
+**Expand after the slice is fun:** stove + mood, tiered parts, pixel sprites, SFX, price-hike prepaid mitigation. (Washing machine + mini-cycle shipped.)
 
 **Cut from the original design to make ship:**
 

@@ -47,6 +47,7 @@ export class GameOverScene extends Phaser.Scene {
     const right =
       `Meals eaten:  ${result.meals}\n` +
       `Showers:      ${result.showers}\n` +
+      `Washes:       ${result.washes}\n` +
       `Repairs:      ${result.repairs}\n` +
       `Cleans:       ${result.cleans}\n` +
       `Scrapped:     ${result.scraps}\n` +

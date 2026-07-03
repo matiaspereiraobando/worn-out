@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CONFIG } from "../config";
+import { clampPlayerSprite } from "../playerHitbox";
 
 type Facing = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
 
@@ -46,7 +47,6 @@ export class Player {
       dy /= len;
     }
 
-    // Resolve axes independently so the player slides along walls / mask edges.
     const nextX = this.clampX(this.sprite.x + dx * speed * dt);
     if (this.isWalkable(nextX, this.sprite.y)) this.sprite.x = nextX;
     const nextY = this.clampY(this.sprite.y + dy * speed * dt);
@@ -104,13 +104,11 @@ export class Player {
   }
 
   private clampX(x: number): number {
-    const halfW = CONFIG.player.w / 2;
-    return Phaser.Math.Clamp(x, halfW, CONFIG.width - halfW);
+    return clampPlayerSprite(x, this.sprite.y).x;
   }
 
   private clampY(y: number): number {
-    const halfH = CONFIG.player.h / 2;
-    return Phaser.Math.Clamp(y, CONFIG.world.floorTop + halfH, CONFIG.world.floorBottom - halfH);
+    return clampPlayerSprite(this.sprite.x, y).y;
   }
 }
 

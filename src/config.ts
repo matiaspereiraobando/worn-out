@@ -89,6 +89,15 @@ export const CONFIG = {
       useHpCost: 13,
       useActionLabel: "Shower",
     },
+    washer: {
+      label: "Washing Machine",
+      critical: false,
+      maxHp: 100,
+      startHp: 100,
+      passiveDecayPerSec: 0.2,
+      useHpCost: 12,
+      useActionLabel: "Wash",
+    },
   },
 
   /** Visual HP thresholds (GDD §5). Fractions of maxHp. */
@@ -137,6 +146,14 @@ export const CONFIG = {
     },
     togglePlug: {
       key: "DIGIT4",
+    },
+    wash: {
+      cycleSec: 8,
+      reward: 15,
+      cooldownSec: 10,
+      sweepsPerSec: 0.9,
+      greenZoneFrac: 0.26,
+      barW: 130,
     },
   },
 
@@ -217,16 +234,40 @@ export const CONFIG = {
 
   player: {
     speed: 132,
-    w: 20,
-    h: 32,
-    walkFps: 10,
+    walkFps: 15,
     spriteScale: 2,
+    /**
+     * Walk/collision hitbox relative to the sprite origin (center, 0.5/0.5).
+     * offsetX/offsetY shift the box from that origin; positive Y moves it down.
+     */
+    hitbox: {
+      w: 25,
+      h: 18,
+      offsetX: 0,
+      offsetY: 20,
+    },
   },
 
   world: {
     hudHeight: 64,
     floorTop: 96,
     floorBottom: 500,
+  },
+
+  /**
+   * Scene layout: hand-tweakable positions for the appliances, the door and the
+   * player's starting spot. All in logical pixels on the 960x540 canvas. Move
+   * these freely to reposition things; just keep appliance fronts reachable in
+   * `walkmask_960x540.png` and clear of the door.
+   */
+  layout: {
+    appliances: {
+      fridge: { x: 200, y: 100 },
+      heater: { x: 660, y: 330 },
+      washer: { x: 850, y: 330 },
+    },
+    door: { x: 88, y: 312 },
+    playerStart: { x: 480, y: 430 },
   },
 
   interaction: {
@@ -247,4 +288,4 @@ export const CONFIG = {
 } as const;
 
 export type StatKey = "hunger" | "hygiene";
-export type ApplianceKey = "fridge" | "heater";
+export type ApplianceKey = "fridge" | "heater" | "washer";

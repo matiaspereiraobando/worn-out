@@ -18,14 +18,18 @@ export class BootScene extends Phaser.Scene {
     this.load.image(ASSETS.sprites.room.key, ASSETS.sprites.room.path);
     this.load.image(ASSETS.sprites.walkmask.key, ASSETS.sprites.walkmask.path);
     this.load.spritesheet(ASSETS.sprites.player.key, ASSETS.sprites.player.path, {
-      frameWidth: 60,
-      frameHeight: 60,
+      frameWidth: 68,
+      frameHeight: 68,
     });
     this.load.spritesheet(ASSETS.sprites.fridge.key, ASSETS.sprites.fridge.path, {
       frameWidth: 48,
       frameHeight: 48,
     });
     this.load.spritesheet(ASSETS.sprites.heater.key, ASSETS.sprites.heater.path, {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
+    this.load.spritesheet(ASSETS.sprites.washer.key, ASSETS.sprites.washer.path, {
       frameWidth: 48,
       frameHeight: 48,
     });
@@ -53,6 +57,7 @@ export class BootScene extends Phaser.Scene {
     this.makeFallback("fallback-player", 16, 16, CONFIG.colors.ok, CONFIG.colors.grime);
     this.makeFallback("fallback-fridge", 24, 30, CONFIG.colors.panel, CONFIG.colors.grime);
     this.makeFallback("fallback-heater", 24, 30, 0x434338, CONFIG.colors.grime);
+    this.makeFallback("fallback-washer", 24, 30, 0x5f6b74, CONFIG.colors.grime);
     this.makeFallback("fallback-door", 24, 30, 0x564531, CONFIG.colors.grime);
     this.makeFallback("fallback-vendor", 24, 30, 0x7f8ba6, CONFIG.colors.grime);
     this.makeFallback("fallback-coin", 10, 10, CONFIG.colors.money, 0x8a7a2e);

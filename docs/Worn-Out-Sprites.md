@@ -61,14 +61,14 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 
 ### 2) Player character spritesheet
 
-- **Path:** `public/assets/sprites/character/player_topdown_8dir_60x60_sheet.png`
-- **Size:** `420x480` (7 columns x 8 rows of `60x60`)
+- **Path:** `public/assets/sprites/character/player_topdown_8dir_68x68_sheet.png`
+- **Size:** `476x544` (7 columns x 8 rows of `68x68`)
 - **Frames layout:**
   - 8 rows total, one direction per row in order: `N, NE, E, SE, S, SW, W, NW`
   - 7 frames per row: frame 1 = idle, frames 2-7 = walk loop
-  - Character is centered in an effective `20x32` gameplay hitbox inside each `60x60` frame
+  - Character is centered in an effective `20x32` gameplay hitbox inside each `68x68` frame (tune via `CONFIG.player.hitbox`)
 - **Prompt:**
-  > Pixel art top-down human character for gloomy apartment survival game, 60x60 per frame, spritesheet 420x480 with 8 directional rows (N, NE, E, SE, S, SW, W, NW), each row with 7 frames (idle + 6-frame walk cycle), simple readable silhouette, tired posture, worn muted clothes (faded olive-green shirt, dark slate trousers, bone-grey undershirt) with a small rust-red accent, transparent background, no anti-aliasing, palette olive-green + slate + bone with rust accent to match grimy apartment.
+  > Pixel art top-down human character for gloomy apartment survival game, 68x68 per frame, spritesheet 476x544 with 8 directional rows (N, NE, E, SE, S, SW, W, NW), each row with 7 frames (idle + 6-frame walk cycle), simple readable silhouette, tired posture, worn muted clothes (faded olive-green shirt, dark slate trousers, bone-grey undershirt) with a small rust-red accent, transparent background, no anti-aliasing, palette olive-green + slate + bone with rust accent to match grimy apartment.
 
 ### 3) Fridge states
 
@@ -85,6 +85,14 @@ This file defines every sprite currently needed for the **top-down retro pixel-a
 - **Frames:** normal, damaged, dead
 - **Prompt:**
   > Top-down 3-4 view pixel art old cylindrical water heater boiler tank, white/bone metal with rust drips and a small pressure gauge and pipes on top, 48x48 per frame, 3-frame strip 144x48, frame1 normal worn unit, frame2 damaged with water leak and sparks, frame3 dead dark inactive unit, readable silhouette, transparent background, no anti-aliasing, palette bone-cream + rust + slate to match grimy apartment.
+
+### 4b) Washing machine states
+
+- **Path:** `public/assets/sprites/appliances/washer_states_48x48.png`
+- **Size:** `144x48` (3 frames horizontally, each `48x48`)
+- **Frames:** normal, damaged, dead
+- **Prompt:**
+  > Top-down 3-4 view pixel art old front-loading washing machine, bone-cream and slate metal body with a round glass drum door and a small "MYSTERY" sticker on the front, 48x48 per frame, 3-frame strip 144x48, frame1 normal worn unit with faint vibration lines, frame2 damaged with leaking water and sparks, frame3 dead dark inactive unit, transparent background, no anti-aliasing, palette bone-cream + slate + rust to match grimy apartment.
 
 ### 5) Apartment door states
 
