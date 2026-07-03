@@ -18,7 +18,7 @@ export class ApplianceView {
   private readonly title: Phaser.GameObjects.BitmapText;
   private readonly hpBarBg: Phaser.GameObjects.Rectangle;
   private readonly hpBar: Phaser.GameObjects.Rectangle;
-  private readonly hpText: Phaser.GameObjects.BitmapText;
+  private readonly hpText: Phaser.GameObjects.Container;
   private readonly status: Phaser.GameObjects.BitmapText;
   private readonly plugIcon?: Phaser.GameObjects.Sprite;
   private readonly surgeIcon?: Phaser.GameObjects.Sprite;
@@ -64,10 +64,8 @@ export class ApplianceView {
     this.hpBar = scene.add
       .rectangle(-W / 2 + 1, H / 2 + 12, W - 2, 4, CONFIG.colors.hp)
       .setOrigin(0, 0.5);
-    this.hpText = scene.add
-      .bitmapText(0, H / 2 + 12, CONFIG.font.key, "", CONFIG.font.sizeSm)
-      .setTint(0x14140f)
-      .setOrigin(0.5);
+    // Dark HP digit with bone outline so it reads on any bar color.
+    this.hpText = this.makeOutlinedText(0, H / 2 + 12, "", CONFIG.colors.bg, CONFIG.colors.text);
 
     this.status = scene.add
       .bitmapText(0, H / 2 + 24, CONFIG.font.key, "", CONFIG.font.sizeSm)
@@ -167,7 +165,7 @@ export class ApplianceView {
       this.body.setVisible(true);
       this.body.setFillStyle(CONFIG.colors.panelDark).setAlpha(0.5);
       this.hpBar.setVisible(false);
-      this.hpText.setText("");
+      this.setOutlinedText(this.hpText, "");
       this.hpBarBg.setFillStyle(CONFIG.colors.panelDark);
       this.plugIcon?.setVisible(false);
       this.setSurgeWarning(false);
@@ -219,7 +217,7 @@ export class ApplianceView {
 
     this.body.setFillStyle(bodyColor);
     this.hpBar.setFillStyle(barColor);
-    this.hpText.setText(`${Math.ceil(appliance.hp)}`);
+    this.setOutlinedText(this.hpText, `${Math.ceil(appliance.hp)}`);
 
     const bits: string[] = [];
     if (!appliance.alive) bits.push("DEAD");
@@ -329,5 +327,43 @@ export class ApplianceView {
     this.scene.time.delayedCall(450, () => {
       if (particles.active) particles.destroy();
     });
+  }
+
+  private makeOutlinedText(
+    x: number,
+    y: number,
+    text: string,
+    fill: number,
+    outline: number,
+  ): Phaser.GameObjects.Container {
+    const size = CONFIG.font.sizeSm;
+    const children: Phaser.GameObjects.GameObject[] = [];
+    for (const [ox, oy] of [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ] as const) {
+      children.push(
+        this.scene.add
+          .bitmapText(ox, oy, CONFIG.font.key, text, size)
+          .setOrigin(0.5)
+          .setTint(outline),
+      );
+    }
+    children.push(
+      this.scene.add.bitmapText(0, 0, CONFIG.font.key, text, size).setOrigin(0.5).setTint(fill),
+    );
+    return this.scene.add.container(x, y, children);
+  }
+
+  private setOutlinedText(container: Phaser.GameObjects.Container, text: string): void {
+    for (const child of container.list) {
+      if (child instanceof Phaser.GameObjects.BitmapText) child.setText(text);
+    }
   }
 }

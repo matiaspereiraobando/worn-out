@@ -44,10 +44,14 @@ export interface RunResult {
 
 interface Pickup {
   sprite: Phaser.GameObjects.Arc | Phaser.GameObjects.Sprite;
-  label: Phaser.GameObjects.BitmapText;
+  glow: Phaser.GameObjects.Arc;
+  /** Outlined value painted on the coin face. */
+  label: Phaser.GameObjects.Container;
   value: number;
   active: boolean;
   respawnIn: number;
+  baseY: number;
+  animT: number;
 }
 
 interface ActiveEvent {
@@ -546,12 +550,28 @@ export class GameScene extends Phaser.Scene {
 
   private buildPickups(): void {
     const hasCoinSprite = this.textures.exists(ASSETS.sprites.coin.key);
+    const coinDepth = 6;
     for (let i = 0; i < CONFIG.pickups.count; i++) {
+      // Soft mustard halo so coins pop on the grimy floor.
+      const glow = this.add
+        .circle(0, 0, 11, CONFIG.colors.money, 0.28)
+        .setDepth(coinDepth - 1)
+        .setVisible(false);
       const sprite = hasCoinSprite
-        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(16, 16)
-        : this.add.circle(0, 0, 7, CONFIG.colors.money).setStrokeStyle(1, 0x8a7a2e);
-      const label = this.bt(0, 0, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(0x14140f);
-      const pickup: Pickup = { sprite, label, value: 0, active: false, respawnIn: 0 };
+        ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(20, 20).setDepth(coinDepth)
+        : this.add.circle(0, 0, 8, CONFIG.colors.money).setStrokeStyle(2, CONFIG.colors.lamp).setDepth(coinDepth);
+      // Dark digit on the coin face, bone outline for contrast on mustard gold.
+      const label = this.makeOutlinedText("", CONFIG.colors.bg, CONFIG.colors.text).setDepth(coinDepth + 1);
+      const pickup: Pickup = {
+        sprite,
+        glow,
+        label,
+        value: 0,
+        active: false,
+        respawnIn: 0,
+        baseY: 0,
+        animT: Math.random() * Math.PI * 2,
+      };
       this.pickups.push(pickup);
       this.spawnPickup(pickup);
     }
@@ -586,13 +606,18 @@ export class GameScene extends Phaser.Scene {
       px = Phaser.Math.Between(30, CONFIG.width - 30);
       py = Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24);
     }
+    p.baseY = py;
+    p.animT = Math.random() * Math.PI * 2;
     p.sprite.setPosition(px, py);
-    p.label.setPosition(p.sprite.x, p.sprite.y - 20).setText(`${p.value}`);
+    p.glow.setPosition(px, py);
+    p.label.setPosition(px, py);
+    this.setOutlinedText(p.label, `${p.value}`);
     if (p.sprite instanceof Phaser.GameObjects.Sprite) {
-      p.sprite.setFrame(Phaser.Math.Between(0, 1));
+      p.sprite.setFrame(0);
     }
     p.active = true;
     p.sprite.setVisible(true);
+    p.glow.setVisible(true);
     p.label.setVisible(true);
   }
 
@@ -610,6 +635,7 @@ export class GameScene extends Phaser.Scene {
         floatY = p.sprite.y;
         p.active = false;
         p.sprite.setVisible(false);
+        p.glow.setVisible(false);
         p.label.setVisible(false);
         p.respawnIn = Phaser.Math.Between(CONFIG.pickups.respawnMinSec, CONFIG.pickups.respawnMaxSec);
       }
@@ -1066,9 +1092,59 @@ export class GameScene extends Phaser.Scene {
 
   private tickPickups(dt: number): void {
     for (const p of this.pickups) {
-      if (p.active) continue;
-      p.respawnIn -= dt;
-      if (p.respawnIn <= 0) this.spawnPickup(p);
+      if (!p.active) {
+        p.respawnIn -= dt;
+        if (p.respawnIn <= 0) this.spawnPickup(p);
+        continue;
+      }
+      // Bob + pulse + shine so coins read on the grimy floor.
+      p.animT += dt;
+      const bob = Math.sin(p.animT * 3.2) * 2.5;
+      const pulse = 1 + Math.sin(p.animT * 4.5) * 0.08;
+      const glowPulse = 0.22 + (Math.sin(p.animT * 4.5) + 1) * 0.1;
+      p.sprite.setPosition(p.sprite.x, p.baseY + bob);
+      if (p.sprite instanceof Phaser.GameObjects.Sprite) {
+        // Texture is 32px; keep ~20px display while pulsing.
+        const base = 20 / 32;
+        p.sprite.setScale(base * pulse);
+        p.sprite.setFrame(Math.sin(p.animT * 5) > 0 ? 1 : 0);
+      } else {
+        p.sprite.setScale(pulse);
+      }
+      p.glow.setPosition(p.sprite.x, p.baseY);
+      p.glow.setScale(pulse * 1.15);
+      p.glow.setAlpha(glowPulse);
+      p.label.setPosition(p.sprite.x, p.baseY + bob);
+    }
+  }
+
+  /** Outlined bitmap label (fill + 8-neighbor stroke), same trick as money floats. */
+  private makeOutlinedText(
+    text: string,
+    fill: number,
+    outline: number,
+    size: number = CONFIG.font.sizeSm,
+  ): Phaser.GameObjects.Container {
+    const children: Phaser.GameObjects.GameObject[] = [];
+    for (const [ox, oy] of [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ] as const) {
+      children.push(this.bt(ox, oy, text, size).setOrigin(0.5).setTint(outline));
+    }
+    children.push(this.bt(0, 0, text, size).setOrigin(0.5).setTint(fill));
+    return this.add.container(0, 0, children);
+  }
+
+  private setOutlinedText(container: Phaser.GameObjects.Container, text: string): void {
+    for (const child of container.list) {
+      if (child instanceof Phaser.GameObjects.BitmapText) child.setText(text);
     }
   }
 
