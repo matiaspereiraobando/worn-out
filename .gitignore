@@ -19,3 +19,6 @@ npm-debug.log*
 # Temp files
 data/
 public/assets/sprites/raw
+
+# Backup Imnages
+*(old).png
