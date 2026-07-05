@@ -292,6 +292,51 @@ export const CONFIG = {
     sizeMd: 10,
     sizeLg: 16,
   },
+
+  /** Bottom toast bar for transient game log messages. */
+  toast: {
+    width: 944,
+    height: 40,
+    marginX: 8,
+    marginBottom: 8,
+    slideMs: 220,
+    holdMs: 2200,
+    fadeOutMs: 900,
+    depth: 1100,
+    bgAlpha: 0.94,
+  },
+
+  /** Top-right card for guided-shift beat instructions (below event strip slot). */
+  tutorialCard: {
+    width: 280,
+    height: 64,
+    marginX: 12,
+    eventStripOffset: 20,
+    stripHeight: 40,
+    marginBelowEvent: 8,
+    slideMs: 180,
+    fadeOutMs: 160,
+    depth: 1100,
+    bgAlpha: 0.96,
+    textPad: 8,
+    skipW: 44,
+    lineSpacing: 2,
+  },
+
+  /** Guided First Shift / Day 0 tuning. */
+  tutorial: {
+    /** Fridge HP after the tutorial Eat (cracked/blinking visual). */
+    fridgeHpAfterEat: 22,
+    /** Stat decay multiplier during Day 0 while world clock runs. */
+    statDecayMultiplier: 0.35,
+    /** Seconds before first event/vendor after Day 0 → Day 1 transition. */
+    postTutorialGraceSec: 12,
+    beat0MaxSec: 4,
+    beat6HoldSec: 4,
+    beat8HoldSec: 5,
+    beat9HoldSec: 2,
+    dayTransitionFadeMs: 600,
+  },
 } as const;
 
 export type StatKey = "hunger" | "hygiene";

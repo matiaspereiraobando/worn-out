@@ -3,11 +3,23 @@ import { CONFIG, type ApplianceKey } from "../config";
 import { Appliance } from "../model/Appliance";
 import { ApplianceView } from "../ui/ApplianceView";
 import { Button } from "../ui/Button";
-import { PHRASES } from "../phrases";
+import { Toast } from "../ui/Toast";
+import { TutorialCard } from "../ui/TutorialCard";
+import { PHRASES, TUTORIAL } from "../phrases";
 import { Player } from "../entities/Player";
 import { WalkMask } from "../model/WalkMask";
 import { playerHitboxSamples } from "../playerHitbox";
 import { ASSETS } from "../assets";
+import { TutorialManager, type HudBarTarget } from "../tutorial/TutorialManager";
+import { setTutorialDone } from "../tutorial/tutorialStorage";
+import { tryShowTip } from "../tutorial/contextualTips";
+
+export type GameMode = "day0" | "day1";
+
+export interface GameSceneData {
+  mode?: GameMode;
+  fromDay0?: boolean;
+}
 
 type GameOverCause = "hunger" | "hygiene" | "debt" | "uninhabitable";
 type MenuMode = "none" | "appliance" | "vendor";
@@ -130,6 +142,7 @@ export class GameScene extends Phaser.Scene {
   private moneyText!: Phaser.GameObjects.BitmapText;
   private partsText!: Phaser.GameObjects.BitmapText;
   private dayText!: Phaser.GameObjects.BitmapText;
+  private dayClockIcon: Phaser.GameObjects.Sprite | null = null;
   private receiptUI!: Phaser.GameObjects.Container;
   private receiptDayText!: Phaser.GameObjects.BitmapText;
   private receiptItemLabels: Phaser.GameObjects.BitmapText[] = [];
@@ -141,7 +154,14 @@ export class GameScene extends Phaser.Scene {
   private receiptDebtRow!: Phaser.GameObjects.Container;
   private receiptDebtAmount!: Phaser.GameObjects.BitmapText;
   private receiptCloseText!: Phaser.GameObjects.BitmapText;
-  private logText!: Phaser.GameObjects.BitmapText;
+  private receiptTutorialText!: Phaser.GameObjects.BitmapText;
+  private toast!: Toast;
+  private tutorialCard!: TutorialCard;
+  private controlHintsText!: Phaser.GameObjects.BitmapText;
+  private mode: GameMode = "day1";
+  private tutorialManager: TutorialManager | null = null;
+  private lastPlayerX = 0;
+  private lastPlayerY = 0;
   private eventBanner!: Phaser.GameObjects.Container;
   private eventStrip!: Phaser.GameObjects.Image;
   private eventStripWarnKey = "fallback-strip-warn";
@@ -175,13 +195,20 @@ export class GameScene extends Phaser.Scene {
   private keyE!: Phaser.Input.Keyboard.Key;
   private keyR!: Phaser.Input.Keyboard.Key;
   private keyX!: Phaser.Input.Keyboard.Key;
+  private keyEsc!: Phaser.Input.Keyboard.Key;
   private keyNums: Phaser.Input.Keyboard.Key[] = [];
+  private day1TransitionQueued = false;
 
   constructor() {
     super("game");
   }
 
-  create(): void {
+  create(data: GameSceneData = {}): void {
+    this.cameras.main.setAlpha(1);
+    this.cameras.main.resetFX();
+    this.day1TransitionQueued = false;
+
+    this.mode = data.mode ?? "day1";
     this.resetState();
     this.buildBackground();
     this.walkMask = new WalkMask(this, ASSETS.sprites.walkmask.key);
@@ -194,10 +221,13 @@ export class GameScene extends Phaser.Scene {
     this.buildWashUI();
     this.buildBillReceipt();
     this.buildEventBanner();
-    this.buildLog();
+    this.toast = new Toast(this);
+    this.tutorialCard = new TutorialCard(this);
     this.buildPickups();
     this.bindKeys();
-    this.log(PHRASES.intro);
+    this.initTutorial(data);
+    this.lastPlayerX = this.player.sprite.x;
+    this.lastPlayerY = this.player.sprite.y;
     this.refreshHud();
   }
 
@@ -282,26 +312,50 @@ export class GameScene extends Phaser.Scene {
     const mkStatValue = (x: number) =>
       this.bt(x, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
 
-    // Each stat block: icon (32) · value · bar. Keep a clear gap between blocks.
+    // Stat blocks left→right: Hunger · Hygiene · Debt · Money · Parts (icon 32 · value · bar).
+    const iconW = 32;
+    const iconGap = 2;
+    const valueSlot = 30;
+    const blockGap = 12;
+    const moneySlot = 45;
+
+    const hungerX = 8;
+    const hygieneX = hungerX + iconW + iconGap + valueSlot + barW + blockGap;
+    const debtX = hygieneX + iconW + iconGap + valueSlot + barW + blockGap;
+    const moneyX = debtX + iconW + iconGap + valueSlot + debtBarW + blockGap;
+    const partsX = moneyX + iconW + 4 + moneySlot + blockGap;
+
     if (hasIcons) {
       const icon = (x: number, frame: number) =>
         this.add.sprite(x, midY, ASSETS.sprites.icons.key, frame).setOrigin(0, 0.5).setDepth(depth);
-      icon(8, 0);
-      icon(184, 1);
-      icon(360, 2);
-      icon(460, 3);
-      icon(780, 7);
+      icon(hungerX, 0);
+      icon(hygieneX, 1);
+      icon(debtX, 8);
+      icon(moneyX, 2);
+      icon(partsX, 3);
     }
-    this.hungerText = mkStatValue(42);
-    this.hungerBar = mkBar(72);
-    this.hygieneText = mkStatValue(218);
-    this.hygieneBar = mkBar(248);
-    // Money icon already present; bare amount (arcade font has no `$` glyph).
-    this.moneyText = this.bt(396, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.money).setDepth(depth);
-    this.partsText = this.bt(496, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
-    this.debtText = mkStatValue(540);
-    this.debtBar = mkBar(570, debtBarW);
-    this.dayText = this.bt(952, midY, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(c.money).setDepth(depth);
+
+    this.hungerText = mkStatValue(hungerX + iconW + iconGap);
+    this.hungerBar = mkBar(hungerX + iconW + iconGap + valueSlot);
+    this.hygieneText = mkStatValue(hygieneX + iconW + iconGap);
+    this.hygieneBar = mkBar(hygieneX + iconW + iconGap + valueSlot);
+    this.debtText = mkStatValue(debtX + iconW + iconGap);
+    this.debtBar = mkBar(debtX + iconW + iconGap + valueSlot, debtBarW);
+    this.moneyText = this.bt(moneyX + iconW + 4, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.money).setDepth(depth);
+    this.partsText = this.bt(partsX + iconW + 4, midY, "", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(c.text).setDepth(depth);
+    const dayBlockRight = CONFIG.width - 8;
+    const clockW = 32;
+    const clockGap = 4;
+    if (hasIcons) {
+      this.dayClockIcon = this.add
+        .sprite(dayBlockRight, midY, ASSETS.sprites.icons.key, 7)
+        .setOrigin(1, 0.5)
+        .setDepth(depth);
+    } else {
+      this.dayClockIcon = null;
+    }
+    const dayTextRight = this.dayClockIcon ? dayBlockRight - clockW - clockGap : dayBlockRight;
+    this.dayText = this.bt(dayTextRight, midY, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(c.money).setDepth(depth);
   }
 
   private buildBillReceipt(): void {
@@ -386,7 +440,11 @@ export class GameScene extends Phaser.Scene {
     children.push(this.receiptDebtRow);
 
     this.receiptCloseText = this.bt(0, 138, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
-    children.push(this.receiptCloseText);
+    this.receiptTutorialText = this.bt(0, 152, "", CONFIG.font.sizeSm)
+      .setOrigin(0.5)
+      .setTint(CONFIG.colors.warn)
+      .setVisible(false);
+    children.push(this.receiptCloseText, this.receiptTutorialText);
 
     this.receiptUI = this.add
       .container(CONFIG.width / 2, CONFIG.height / 2, children)
@@ -493,14 +551,138 @@ export class GameScene extends Phaser.Scene {
       this.menuContainer.add(btn.container);
     }
 
-    this.bt(
+    this.controlHintsText = this.bt(
       CONFIG.width / 2,
-      CONFIG.height - 16,
+      CONFIG.height - 56,
       "Arrows move  E interact  1-N action  R pickup",
       CONFIG.font.sizeSm,
     )
       .setOrigin(0.5)
       .setTint(CONFIG.colors.textDim);
+  }
+
+  private initTutorial(data: GameSceneData): void {
+    this.tutorialManager = new TutorialManager({
+      showCard: (msg, opts) => this.tutorialCard.show(msg, opts),
+      dismissCard: () => this.tutorialCard.dismiss(),
+      pulseHudBar: (target) => this.pulseHudBar(target),
+      pulseAppliance: (key) => this.pulseAppliance(key),
+      spawnCoinNearPlayer: () => this.spawnCoinNearPlayer(),
+      scriptTutorialFridgeDamage: () => this.scriptTutorialFridgeDamage(),
+      setReceiptTutorialNote: (note) => this.setReceiptTutorialNote(note),
+      setControlHintsVisible: (visible) => this.controlHintsText.setVisible(visible),
+      triggerTutorialBill: () => this.triggerTutorialBill(),
+      transitionToDay1: () => this.transitionToDay1(),
+    });
+
+    if (this.mode === "day0") {
+      this.tutorialManager.start();
+      return;
+    }
+
+    if (data.fromDay0) {
+      this.applyPostTutorialGrace();
+      this.cameras.main.fadeIn(CONFIG.tutorial.dayTransitionFadeMs, 0, 0, 0);
+      this.log(TUTORIAL.day1Start);
+    } else {
+      this.log(PHRASES.intro);
+    }
+  }
+
+  private transitionToDay1(): void {
+    if (this.day1TransitionQueued) return;
+    this.day1TransitionQueued = true;
+
+    const fadeMs = CONFIG.tutorial.dayTransitionFadeMs;
+    this.tutorialCard.dismiss();
+    this.setReceiptTutorialNote(null);
+    this.controlHintsText.setVisible(true);
+    this.cameras.main.fadeOut(fadeMs, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+      if (progress < 1) return;
+      setTutorialDone();
+      this.scene.restart({ mode: "day1", fromDay0: true });
+    });
+  }
+
+  private scriptTutorialFridgeDamage(): void {
+    const fridge = this.appliances.fridge;
+    if (!fridge) return;
+    fridge.hp = CONFIG.tutorial.fridgeHpAfterEat;
+    fridge.alive = fridge.hp > 0;
+  }
+
+  private triggerTutorialBill(): void {
+    if (this.mode !== "day0") return;
+    this.chargeBill();
+  }
+
+  private isDay0(): boolean {
+    return this.mode === "day0";
+  }
+
+  private applyPostTutorialGrace(): void {
+    const grace = CONFIG.tutorial.postTutorialGraceSec;
+    this.nextEventIn = CONFIG.events.firstEventDelaySec + grace;
+    this.nextVendorIn = CONFIG.vendor.minIntervalSec + grace;
+  }
+
+  private setReceiptTutorialNote(note: string | null): void {
+    if (note) {
+      this.receiptTutorialText.setText(note).setVisible(true);
+    } else {
+      this.receiptTutorialText.setVisible(false);
+    }
+  }
+
+  private pulseHudBar(target: HudBarTarget): void {
+    const bar =
+      target === "hunger" ? this.hungerBar : target === "hygiene" ? this.hygieneBar : this.debtBar;
+    this.tweens.killTweensOf(bar);
+    bar.setAlpha(1);
+    this.tweens.add({
+      targets: bar,
+      alpha: 0.35,
+      duration: 280,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => bar.setAlpha(1),
+    });
+  }
+
+  private pulseAppliance(key: ApplianceKey): void {
+    const view = this.views[key] as ApplianceView;
+    view.setInRange(true);
+    this.tweens.killTweensOf(view.container);
+    this.tweens.add({
+      targets: view.container,
+      scaleX: 1.06,
+      scaleY: 1.06,
+      duration: 300,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => view.container.setScale(1),
+    });
+  }
+
+  private spawnCoinNearPlayer(): void {
+    const px = this.player.sprite.x;
+    const py = this.player.sprite.y;
+    let pickup = this.pickups.find((p) => !p.active);
+    if (!pickup) pickup = this.pickups[0];
+    if (!pickup) return;
+
+    let cx = px + Phaser.Math.Between(-40, 40);
+    let cy = py + Phaser.Math.Between(-30, 30);
+    for (let i = 0; i < 20 && !this.walkMask.isWalkable(cx, cy); i++) {
+      cx = px + Phaser.Math.Between(-40, 40);
+      cy = py + Phaser.Math.Between(-30, 30);
+    }
+    this.spawnPickupAt(pickup, cx, cy);
+  }
+
+  private maybeShowTip(id: Parameters<typeof tryShowTip>[0], msg: string): void {
+    if (this.isDay0()) return;
+    tryShowTip(id, msg, (text) => this.toast.show(text));
   }
 
   private buildEventBanner(): void {
@@ -544,10 +726,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private buildLog(): void {
-    this.logText = this.bt(CONFIG.width / 2, CONFIG.height - 34, "").setOrigin(0.5).setTint(CONFIG.colors.textDim);
-  }
-
   private buildPickups(): void {
     const hasCoinSprite = this.textures.exists(ASSETS.sprites.coin.key);
     const coinDepth = 6;
@@ -584,6 +762,7 @@ export class GameScene extends Phaser.Scene {
     this.keyE = kb.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.keyR = kb.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.keyX = kb.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    this.keyEsc = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.keyNums = [
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
@@ -598,9 +777,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnPickup(p: Pickup): void {
-    p.value = Phaser.Math.Between(CONFIG.pickups.minValue, CONFIG.pickups.maxValue);
     let px = Phaser.Math.Between(30, CONFIG.width - 30);
     let py = Phaser.Math.Between(CONFIG.world.floorTop + 20, CONFIG.world.floorBottom - 24);
+    this.spawnPickupAt(p, px, py);
+  }
+
+  private spawnPickupAt(p: Pickup, px: number, py: number): void {
+    p.value = Phaser.Math.Between(CONFIG.pickups.minValue, CONFIG.pickups.maxValue);
     // Only drop coins on walkable floor; retry a few times, then accept the last.
     for (let i = 0; i < 40 && !this.walkMask.isWalkable(px, py); i++) {
       px = Phaser.Math.Between(30, CONFIG.width - 30);
@@ -643,7 +826,7 @@ export class GameScene extends Phaser.Scene {
     if (got > 0) {
       this.money += got;
       this.spawnMoneyFloat(floatX, floatY, got);
-      this.log(`Picked up +${got}`);
+      this.tutorialManager?.onPickup();
       this.refreshHud();
     }
   }
@@ -686,23 +869,48 @@ export class GameScene extends Phaser.Scene {
     if (this.gameEnded) return;
 
     const dtReal = deltaMs / 1000;
+
+    if (Phaser.Input.Keyboard.JustDown(this.keyEsc) && this.isDay0() && this.tutorialManager?.isActive()) {
+      this.tutorialManager.skip();
+    }
+
     if (this.receiptOpen) {
+      this.toast.setSuppressed(true);
       this.tickReceipt(dtReal);
       this.refreshHud();
       return;
     }
+    this.toast.setSuppressed(false);
 
     this.handleInput(dtReal);
     if (this.washing) this.tickWash(dtReal);
-    this.tickVendor(dtReal);
-    const dt = this.interactionPaused ? 0 : dtReal;
+
+    const day0 = this.isDay0();
+    const tutorialPaused = this.tutorialManager?.shouldPauseWorld() ?? false;
+
+    if (!day0) this.tickVendor(dtReal);
+
+    const dt = this.interactionPaused || tutorialPaused ? 0 : dtReal;
+    const beatDt = tutorialPaused ? dtReal : dt;
+
+    const px = this.player.sprite.x;
+    const py = this.player.sprite.y;
+    if (Math.abs(px - this.lastPlayerX) > 1 || Math.abs(py - this.lastPlayerY) > 1) {
+      this.tutorialManager?.onPlayerMoved();
+      this.lastPlayerX = px;
+      this.lastPlayerY = py;
+    }
+
+    if (day0) this.tutorialManager?.tick(beatDt);
 
     if (dt > 0) {
-      this.tickStats(dt);
+      this.tickStats(dt, day0);
       this.tickAppliances(dt);
       this.tickPickups(dt);
       this.tickBill(dt);
-      this.tickEvents(dt);
+      if (!day0) this.tickEvents(dt);
+    } else if (day0 && !tutorialPaused) {
+      this.tickStats(dtReal, true);
     }
 
     this.updateNearestAppliance();
@@ -710,7 +918,9 @@ export class GameScene extends Phaser.Scene {
     if (this.menuMode === "appliance" && this.menuContainer.visible) this.refreshMenuOptions();
     this.order.forEach((key) => this.views[key].update(this.appliances[key], dtReal));
     this.refreshHud();
-    if (dt > 0) this.checkGameOver();
+    if (this.tutorialCard.isVisible()) this.controlHintsText.setVisible(false);
+    else if (!this.isDay0()) this.controlHintsText.setVisible(true);
+    if (dt > 0 && !this.isDay0()) this.checkGameOver();
   }
 
   private handleInput(dt: number): void {
@@ -763,6 +973,9 @@ export class GameScene extends Phaser.Scene {
     if (best !== null) {
       const inRangeKey: ApplianceKey = best;
       (this.views[inRangeKey] as ApplianceView).setInRange(true);
+      if (inRangeKey === "washer") {
+        this.maybeShowTip("washer", TUTORIAL.tips.washer);
+      }
     }
   }
 
@@ -797,6 +1010,17 @@ export class GameScene extends Phaser.Scene {
     this.interactionPaused = false;
     this.menuContainer.setPosition(this.views[key].worldX, this.views[key].worldY - 72).setVisible(true);
     this.refreshMenuOptions();
+    this.tutorialManager?.onApplianceMenuOpen(key);
+    this.checkRepairTip(key);
+  }
+
+  private checkRepairTip(key: ApplianceKey): void {
+    const a = this.appliances[key];
+    if (!a) return;
+    const needsRepair = !a.alive || a.hp / a.maxHp < 0.25;
+    if (needsRepair && this.parts >= CONFIG.actions.repair.partsCost) {
+      this.maybeShowTip("repair", TUTORIAL.tips.repair);
+    }
   }
 
   private openVendorMenu(): void {
@@ -820,7 +1044,7 @@ export class GameScene extends Phaser.Scene {
       this.menuTitle.setText("DON JOSE");
       options = [
         {
-          label: `Buy ${CONFIG.vendor.partsBundle} parts ($${CONFIG.vendor.partsPrice})`,
+          label: `Buy ${CONFIG.vendor.partsBundle} parts (${CONFIG.vendor.partsPrice})`,
           enabled: this.money >= CONFIG.vendor.partsPrice,
           action: () => this.buyFromVendor(),
         },
@@ -837,7 +1061,7 @@ export class GameScene extends Phaser.Scene {
       if (!a) {
         options = [
           {
-            label: `Buy New ($${CONFIG.actions.buyNew.price})`,
+            label: `Buy New (${CONFIG.actions.buyNew.price})`,
             enabled: this.money >= CONFIG.actions.buyNew.price,
             action: () => this.doBuyNew(key),
           },
@@ -860,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
             action: () => this.doRepair(key),
           },
           {
-            label: `Clean ($${CONFIG.actions.clean.moneyCost})`,
+            label: `Clean (${CONFIG.actions.clean.moneyCost})`,
             enabled:
               this.money >= CONFIG.actions.clean.moneyCost && (a.cleanCooldownSec ?? 1) <= 0,
             action: () => this.doClean(key),
@@ -915,6 +1139,7 @@ export class GameScene extends Phaser.Scene {
       this.showers++;
     }
     this.log(PHRASES.onUse);
+    this.tutorialManager?.onUse(key);
   }
 
   private startWash(key: ApplianceKey): void {
@@ -992,6 +1217,7 @@ export class GameScene extends Phaser.Scene {
     a.repair();
     this.repairs++;
     this.log(PHRASES.onRepair);
+    if (this.isDay0()) this.tutorialManager?.onRepair(key);
   }
 
   private doClean(key: ApplianceKey): void {
@@ -1034,6 +1260,7 @@ export class GameScene extends Phaser.Scene {
     if (!a) return;
     if (!a.canScrap()) {
       this.log("Too new to scrap.");
+      this.maybeShowTip("scrap-lock", "Too new to scrap.");
       return;
     }
     const yielded = a.scrapYield();
@@ -1050,7 +1277,7 @@ export class GameScene extends Phaser.Scene {
     if (this.appliances[key]) return;
     const price = CONFIG.actions.buyNew.price;
     if (this.money < price) {
-      this.log("Can't afford a new one.");
+      this.log("Cannot afford a new one.");
       return;
     }
     this.money -= price;
@@ -1074,15 +1301,20 @@ export class GameScene extends Phaser.Scene {
     this.log(PHRASES.onVendorBuy);
   }
 
-  private tickStats(dt: number): void {
+  private tickStats(dt: number, tutorialActive = false): void {
+    const decayScale = tutorialActive ? CONFIG.tutorial.statDecayMultiplier : 1;
     const h = CONFIG.stats.hunger;
-    let hungerDecay = h.decayPerSec;
-    if (!this.appliances.fridge?.alive || !this.appliances.fridge?.plugged) hungerDecay += h.deadPenaltyPerSec;
+    let hungerDecay = h.decayPerSec * decayScale;
+    if (!this.appliances.fridge?.alive || !this.appliances.fridge?.plugged) {
+      hungerDecay += h.deadPenaltyPerSec * decayScale;
+    }
     this.hunger = Math.max(0, this.hunger - hungerDecay * dt);
 
     const g = CONFIG.stats.hygiene;
-    let hygDecay = g.decayPerSec;
-    if (!this.appliances.heater?.alive || !this.appliances.heater?.plugged) hygDecay += g.deadPenaltyPerSec;
+    let hygDecay = g.decayPerSec * decayScale;
+    if (!this.appliances.heater?.alive || !this.appliances.heater?.plugged) {
+      hygDecay += g.deadPenaltyPerSec * decayScale;
+    }
     this.hygiene = Math.max(0, this.hygiene - hygDecay * dt);
   }
 
@@ -1149,6 +1381,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tickBill(dt: number): void {
+    if (this.isDay0()) return;
     this.dayTimer -= dt;
     if (this.dayTimer <= 0) {
       this.dayTimer += CONFIG.bills.dayLengthSec;
@@ -1189,6 +1422,7 @@ export class GameScene extends Phaser.Scene {
       this.money = 0;
       this.debt += shortfall;
       this.log(PHRASES.onBill(bill.total) + " " + PHRASES.onDebt);
+      this.maybeShowTip("debt", PHRASES.onDebt);
     }
     if (paid > 0) {
       this.spawnMoneyFloat(this.player.sprite.x, this.player.sprite.y - 20, -paid);
@@ -1234,6 +1468,7 @@ export class GameScene extends Phaser.Scene {
     this.receiptOpen = true;
     this.receiptUI.setVisible(true);
     this.updateReceiptCloseText();
+    this.tutorialManager?.onBillReceiptOpen();
   }
 
   private tickReceipt(dt: number): void {
@@ -1255,6 +1490,8 @@ export class GameScene extends Phaser.Scene {
     this.receiptOpen = false;
     this.receiptCloseLeft = 0;
     this.receiptUI.setVisible(false);
+    this.setReceiptTutorialNote(null);
+    this.tutorialManager?.onBillReceiptClose();
     this.checkGameOver();
   }
 
@@ -1283,6 +1520,7 @@ export class GameScene extends Phaser.Scene {
         targetKey: target,
       };
       this.log(PHRASES.onSurgeWarning);
+      this.maybeShowTip("unplug", TUTORIAL.tips.unplug);
     } else {
       this.activeEvent = { type: "hike", warningLeft: CONFIG.events.priceHike.warningSec };
       this.log(PHRASES.onPriceHike);
@@ -1369,6 +1607,7 @@ export class GameScene extends Phaser.Scene {
         this.vendorState = "warning";
         this.vendorTimer = CONFIG.vendor.warningSec;
         this.log(PHRASES.onVendorWarning);
+        this.maybeShowTip("vendor", TUTORIAL.tips.vendor);
       }
     } else if (this.vendorState === "warning") {
       this.vendorTimer -= dtReal;
@@ -1474,9 +1713,13 @@ export class GameScene extends Phaser.Scene {
 
     const bill = this.computeBillBreakdown();
     const pause = this.interactionPaused || this.receiptOpen ? " PAUSE" : "";
-    // Total is already hike-adjusted; do not show the multiplier (easy to misread as extra).
-    this.dayText.setText(`NEXT ${bill.total}  DAY ${this.days + 1}  ${Math.ceil(this.dayTimer)}s${pause}`);
-    this.dayText.setTint(bill.multiplier > 1 ? CONFIG.colors.danger : CONFIG.colors.money);
+    if (this.isDay0()) {
+      this.dayText.setText(`DAY 0  ORIENTATION${pause}`);
+      this.dayText.setTint(CONFIG.colors.warn);
+    } else {
+      this.dayText.setText(`NEXT ${bill.total}  DAY ${this.days + 1}  ${Math.ceil(this.dayTimer)}s${pause}`);
+      this.dayText.setTint(bill.multiplier > 1 ? CONFIG.colors.danger : CONFIG.colors.money);
+    }
   }
 
   /** Shared fill: greenish at full, reddish near empty. */
@@ -1492,10 +1735,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private log(msg: string): void {
-    this.logText.setText(msg);
-    this.logText.setAlpha(1);
-    this.tweens.killTweensOf(this.logText);
-    this.tweens.add({ targets: this.logText, alpha: 0.4, delay: 2200, duration: 900 });
+    this.toast.show(msg);
   }
 
   private flashBills(): void {

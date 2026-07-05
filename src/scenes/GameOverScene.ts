@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CONFIG } from "../config";
+import { fmtArcadeNum } from "../fontSafe";
 import { PHRASES } from "../phrases";
 import type { RunResult } from "./GameScene";
 
@@ -27,22 +28,22 @@ export class GameOverScene extends Phaser.Scene {
         .setOrigin(origin);
 
     text(40, "WORN OUT", CONFIG.font.sizeLg, c.text);
-    text(66, `"${result.causeText}"`, CONFIG.font.sizeSm, c.danger);
+    text(66, result.causeText, CONFIG.font.sizeSm, c.danger);
 
     this.add.rectangle(cx, 92, 460, 1, c.grime).setOrigin(0.5);
-    text(112, `HIGH SCORE: $${result.finalScore.toLocaleString()}`, CONFIG.font.sizeMd, c.money);
+    text(112, `HIGH SCORE: ${fmtArcadeNum(result.finalScore)}`, CONFIG.font.sizeMd, c.money);
     text(
       134,
-      `raw $${result.rawScore.toLocaleString()}  ×  ${result.mult}  (${result.archetypeLabel})`,
+      `raw ${fmtArcadeNum(result.rawScore)}  x  ${result.mult}  (${result.archetypeLabel})`,
       CONFIG.font.sizeSm,
       c.textDim,
     );
     this.add.rectangle(cx, 156, 460, 1, c.grime).setOrigin(0.5);
 
     const left =
-      `Bills paid:      $${result.billsPaid}\n` +
-      `New appliances:  $${result.newApplianceValue}\n` +
-      `Debt at break:   $${result.debt}\n` +
+      `Bills paid:      ${fmtArcadeNum(result.billsPaid)}\n` +
+      `New appliances:  ${fmtArcadeNum(result.newApplianceValue)}\n` +
+      `Debt at break:   ${fmtArcadeNum(result.debt)}\n` +
       `Days survived:   ${result.days}`;
     const right =
       `Meals eaten:  ${result.meals}\n` +
@@ -65,7 +66,7 @@ export class GameOverScene extends Phaser.Scene {
       .setTint(c.text)
       .setOrigin(0, 0);
 
-    text(400, `PLAYER TYPE: "${result.archetypeLabel}"`, CONFIG.font.sizeSm, c.money);
+    text(400, `PLAYER TYPE: ${result.archetypeLabel}`, CONFIG.font.sizeSm, c.money);
     text(420, PHRASES.manufacturer, CONFIG.font.sizeSm, c.textDim);
 
     const btn = this.add
@@ -79,10 +80,10 @@ export class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5);
     btn.on("pointerover", () => btn.setFillStyle(c.grime));
     btn.on("pointerout", () => btn.setFillStyle(c.panel));
-    btn.on("pointerdown", () => this.scene.start("game"));
-    this.input.keyboard?.once("keydown-SPACE", () => this.scene.start("game"));
-    this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("game"));
+    btn.on("pointerdown", () => this.scene.start("game", { mode: "day1" }));
+    this.input.keyboard?.once("keydown-SPACE", () => this.scene.start("game", { mode: "day1" }));
+    this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("game", { mode: "day1" }));
 
-    text(496, "[ click RETRY or press SPACE ]", CONFIG.font.sizeSm, c.textDim);
+    text(496, "CLICK RETRY OR PRESS SPACE", CONFIG.font.sizeSm, c.textDim);
   }
 }

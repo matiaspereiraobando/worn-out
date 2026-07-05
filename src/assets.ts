@@ -19,6 +19,7 @@ export const ASSETS = {
     billPaper: { key: "bill-paper", path: "assets/sprites/ui/bill_receipt_paper.png" },
     stripWarn: { key: "strip-warn", path: "assets/sprites/ui/strip_warn_960x40.png" },
     stripDanger: { key: "strip-danger", path: "assets/sprites/ui/strip_danger_960x40.png" },
+    titleScreen: { key: "title-screen", path: "assets/sprites/title_screen_960x540.png" },
   },
 } as const;
 

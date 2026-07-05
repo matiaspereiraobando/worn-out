@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { CONFIG } from "./config";
 import { BootScene } from "./scenes/BootScene";
+import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
 import { GameOverScene } from "./scenes/GameOverScene";
 
@@ -22,7 +23,7 @@ const game = new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
     autoRound: true,
   },
-  scene: [BootScene, GameScene, GameOverScene],
+  scene: [BootScene, MenuScene, GameScene, GameOverScene],
 });
 
 export default game;
