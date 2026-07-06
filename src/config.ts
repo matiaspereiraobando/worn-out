@@ -172,7 +172,7 @@ export const CONFIG = {
   /**
    * Bills: charged every `dayLengthSec` (a "day"). Unpayable remainder becomes
    * debt. Line items scale up when the relevant appliance is broken.
-   * Note: arcade bitmap font has no `$` glyph — HUD/receipt use bare amounts.
+   * HUD/receipt amounts are bare numbers; money icon carries the meaning.
    */
   bills: {
     dayLengthSec: 60,
@@ -222,6 +222,9 @@ export const CONFIG = {
   /** Game over (GDD §14). */
   gameOver: {
     debtLimit: 100,
+    fadeOutMs: 800,
+    fadeInMs: 600,
+    holdMs: 400,
     // "All criticals dead" is evaluated over the critical appliances present.
   },
 
@@ -229,9 +232,11 @@ export const CONFIG = {
   score: {
     debtWeight: 0.5,
     archetypes: {
-      consumer: { label: "The Consumer", mult: 1.2 },
-      cannibal: { label: "The Cannibal", mult: 1.0 },
-      technician: { label: "The Technician", mult: 0.8 },
+      consumer: { id: "consumer" as const, label: "The Consumer", mult: 1.2 },
+      cannibal: { id: "cannibal" as const, label: "The Cannibal", mult: 1.0 },
+      technician: { id: "technician" as const, label: "The Technician", mult: 0.8 },
+      hustler: { id: "hustler" as const, label: "The Hustler", mult: 0.9 },
+      tenant: { id: "tenant" as const, label: "The Tenant", mult: 1.0 },
     },
   },
 

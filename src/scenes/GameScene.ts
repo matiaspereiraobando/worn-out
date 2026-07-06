@@ -13,6 +13,7 @@ import { ASSETS } from "../assets";
 import { TutorialManager, type HudBarTarget } from "../tutorial/TutorialManager";
 import { setTutorialDone } from "../tutorial/tutorialStorage";
 import { tryShowTip } from "../tutorial/contextualTips";
+import { detectArchetype, type ArchetypeId } from "../score/archetype";
 
 export type GameMode = "day0" | "day1";
 
@@ -36,7 +37,11 @@ export interface RunResult {
   causeText: string;
   rawScore: number;
   mult: number;
+  archetypeId: ArchetypeId;
   archetypeLabel: string;
+  archetypeReason: string;
+  archetypeBonusLine: string;
+  manufacturerQuote: string;
   finalScore: number;
   billsPaid: number;
   newApplianceValue: number;
@@ -128,6 +133,7 @@ export class GameScene extends Phaser.Scene {
   private vendorState: "idle" | "warning" | "open" = "idle";
   private vendorTimer = 0;
   private gameEnded = false;
+  private endGameTransitioning = false;
   private interactionPaused = false;
   private receiptOpen = false;
   private receiptCloseLeft = 0;
@@ -153,6 +159,8 @@ export class GameScene extends Phaser.Scene {
   private receiptPaidAmount!: Phaser.GameObjects.BitmapText;
   private receiptDebtRow!: Phaser.GameObjects.Container;
   private receiptDebtAmount!: Phaser.GameObjects.BitmapText;
+  private receiptScoreRow!: Phaser.GameObjects.Container;
+  private receiptScoreAmount!: Phaser.GameObjects.BitmapText;
   private receiptCloseText!: Phaser.GameObjects.BitmapText;
   private receiptTutorialText!: Phaser.GameObjects.BitmapText;
   private toast!: Toast;
@@ -259,6 +267,7 @@ export class GameScene extends Phaser.Scene {
     this.receiptOpen = false;
     this.receiptCloseLeft = 0;
     this.gameEnded = false;
+    this.endGameTransitioning = false;
     this.pickups = [];
     this.nearestAppliance = null;
     this.menuMode = "none";
@@ -438,6 +447,18 @@ export class GameScene extends Phaser.Scene {
       .container(0, 0, [debtLabel, this.receiptDebtAmount, debtRule])
       .setVisible(false);
     children.push(this.receiptDebtRow);
+
+    const scoreLabel = this.bt(colL, totalTop + 98, "TO SCORE", CONFIG.font.sizeSm)
+      .setOrigin(0, 0.5)
+      .setTint(CONFIG.colors.money);
+    this.receiptScoreAmount = this.bt(colR, totalTop + 98, "", CONFIG.font.sizeSm)
+      .setOrigin(1, 0.5)
+      .setTint(CONFIG.colors.money);
+    const scoreRule = this.add.rectangle(0, totalTop + 107, ruleW, 1, ruleColor).setOrigin(0.5);
+    this.receiptScoreRow = this.add
+      .container(0, 0, [scoreLabel, this.receiptScoreAmount, scoreRule])
+      .setVisible(false);
+    children.push(this.receiptScoreRow);
 
     this.receiptCloseText = this.bt(0, 138, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
     this.receiptTutorialText = this.bt(0, 152, "", CONFIG.font.sizeSm)
@@ -1044,7 +1065,7 @@ export class GameScene extends Phaser.Scene {
       this.menuTitle.setText("DON JOSE");
       options = [
         {
-          label: `Buy ${CONFIG.vendor.partsBundle} parts (${CONFIG.vendor.partsPrice})`,
+          label: `Buy ${CONFIG.vendor.partsBundle} parts ($${CONFIG.vendor.partsPrice})`,
           enabled: this.money >= CONFIG.vendor.partsPrice,
           action: () => this.buyFromVendor(),
         },
@@ -1061,7 +1082,7 @@ export class GameScene extends Phaser.Scene {
       if (!a) {
         options = [
           {
-            label: `Buy New (${CONFIG.actions.buyNew.price})`,
+            label: `Buy New ($${CONFIG.actions.buyNew.price})`,
             enabled: this.money >= CONFIG.actions.buyNew.price,
             action: () => this.doBuyNew(key),
           },
@@ -1084,7 +1105,7 @@ export class GameScene extends Phaser.Scene {
             action: () => this.doRepair(key),
           },
           {
-            label: `Clean (${CONFIG.actions.clean.moneyCost})`,
+            label: `Clean ($${CONFIG.actions.clean.moneyCost})`,
             enabled:
               this.money >= CONFIG.actions.clean.moneyCost && (a.cleanCooldownSec ?? 1) <= 0,
             action: () => this.doClean(key),
@@ -1277,7 +1298,7 @@ export class GameScene extends Phaser.Scene {
     if (this.appliances[key]) return;
     const price = CONFIG.actions.buyNew.price;
     if (this.money < price) {
-      this.log("Cannot afford a new one.");
+      this.log("Can't afford a new one.");
       return;
     }
     this.money -= price;
@@ -1433,7 +1454,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showBillReceipt(bill: BillBreakdown, paid: number, shortfall: number): void {
-    // Bare amounts: arcade font has no `$` glyph.
+    // Bare amounts on receipt; money icon carries meaning in HUD.
     this.receiptDayText.setText(`DAY ${this.days}`);
     const amounts = [bill.rent, bill.electricity, bill.water, bill.food];
     const labels = [
@@ -1462,6 +1483,13 @@ export class GameScene extends Phaser.Scene {
       this.receiptDebtRow.setVisible(true);
     } else {
       this.receiptDebtRow.setVisible(false);
+    }
+
+    if (paid > 0) {
+      this.receiptScoreAmount.setText(`+${paid}`);
+      this.receiptScoreRow.setVisible(true);
+    } else {
+      this.receiptScoreRow.setVisible(false);
     }
 
     this.receiptCloseLeft = CONFIG.bills.receiptSec;
@@ -1707,7 +1735,7 @@ export class GameScene extends Phaser.Scene {
     this.hygieneText.setText(`${Math.ceil(this.hygiene)}`);
     this.debtText.setText(`${this.debt}`);
 
-    // Bare amounts: arcade font has no `$` glyph (money icon carries the meaning).
+    // Bare amounts in HUD; money icon carries the meaning.
     this.moneyText.setText(`${this.money}`);
     this.partsText.setText(`${this.parts}`);
 
@@ -1765,6 +1793,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endGame(cause: GameOverCause): void {
+    if (this.gameEnded) return;
     this.gameEnded = true;
     this.washing = false;
     this.washUI?.setVisible(false);
@@ -1772,27 +1801,25 @@ export class GameScene extends Phaser.Scene {
     this.receiptUI?.setVisible(false);
     this.closeMenu();
 
-    let archetypeLabel: string;
-    let mult: number;
-    if (this.buys > this.scraps) {
-      archetypeLabel = CONFIG.score.archetypes.consumer.label;
-      mult = CONFIG.score.archetypes.consumer.mult;
-    } else if (this.buys === 0 && this.repairs > this.scraps) {
-      archetypeLabel = CONFIG.score.archetypes.technician.label;
-      mult = CONFIG.score.archetypes.technician.mult;
-    } else {
-      archetypeLabel = CONFIG.score.archetypes.cannibal.label;
-      mult = CONFIG.score.archetypes.cannibal.mult;
-    }
+    const archetype = detectArchetype({
+      buys: this.buys,
+      scraps: this.scraps,
+      repairs: this.repairs,
+      washes: this.washes,
+    });
 
     const raw = this.currentRawScore();
     const result: RunResult = {
       cause,
       causeText: PHRASES.gameOver[cause],
       rawScore: raw,
-      mult,
-      archetypeLabel,
-      finalScore: Math.round(raw * mult),
+      mult: archetype.mult,
+      archetypeId: archetype.id,
+      archetypeLabel: archetype.label,
+      archetypeReason: archetype.reasonLine,
+      archetypeBonusLine: archetype.bonusLine,
+      manufacturerQuote: archetype.manufacturerQuote,
+      finalScore: Math.round(raw * archetype.mult),
       billsPaid: this.billsPaid,
       newApplianceValue: this.newApplianceValue,
       debt: this.debt,
@@ -1808,6 +1835,31 @@ export class GameScene extends Phaser.Scene {
       surgesDodged: this.surgesDodged,
       surgesTaken: this.surgesTaken,
     };
-    this.scene.start("gameover", result);
+
+    if (this.endGameTransitioning) return;
+    this.endGameTransitioning = true;
+
+    const cx = CONFIG.width / 2;
+    const cy = CONFIG.height / 2;
+    this.add
+      .bitmapText(cx, cy - 30, CONFIG.font.key, result.causeText, CONFIG.font.sizeMd)
+      .setTint(CONFIG.colors.danger)
+      .setOrigin(0.5)
+      .setDepth(2000)
+      .setCenterAlign()
+      .setMaxWidth(CONFIG.width - 80);
+
+    this.time.delayedCall(CONFIG.gameOver.holdMs, () => {
+      this.cameras.main.fadeOut(
+        CONFIG.gameOver.fadeOutMs,
+        0,
+        0,
+        0,
+        (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+          if (progress < 1) return;
+          this.scene.start("gameover", result);
+        },
+      );
+    });
   }
 }

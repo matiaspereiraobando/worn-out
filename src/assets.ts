@@ -20,6 +20,9 @@ export const ASSETS = {
     stripWarn: { key: "strip-warn", path: "assets/sprites/ui/strip_warn_960x40.png" },
     stripDanger: { key: "strip-danger", path: "assets/sprites/ui/strip_danger_960x40.png" },
     titleScreen: { key: "title-screen", path: "assets/sprites/title_screen_960x540.png" },
+    gameOverScreen: {
+      key: "game-over-screen",
+      path: "assets/sprites/game_over_screen_960x540.png",
+    },
   },
 } as const;
-

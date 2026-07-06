@@ -54,6 +54,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image(ASSETS.sprites.stripWarn.key, ASSETS.sprites.stripWarn.path);
     this.load.image(ASSETS.sprites.stripDanger.key, ASSETS.sprites.stripDanger.path);
     this.load.image(ASSETS.sprites.titleScreen.key, ASSETS.sprites.titleScreen.path);
+    this.load.image(ASSETS.sprites.gameOverScreen.key, ASSETS.sprites.gameOverScreen.path);
   }
 
   create(): void {
@@ -69,6 +70,7 @@ export class BootScene extends Phaser.Scene {
     this.makeFallback("fallback-strip-warn", 960, 40, CONFIG.colors.warn, CONFIG.colors.grime);
     this.makeFallback("fallback-strip-danger", 960, 40, CONFIG.colors.danger, CONFIG.colors.grime);
     this.makeFallback("fallback-title-screen", 960, 540, CONFIG.colors.bg, CONFIG.colors.panelDark);
+    this.makeFallback("fallback-game-over-screen", 960, 540, CONFIG.colors.bg, CONFIG.colors.panelDark);
 
     this.scene.start("menu");
   }
