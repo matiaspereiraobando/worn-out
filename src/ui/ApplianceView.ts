@@ -29,6 +29,7 @@ export class ApplianceView {
   private surgePulseT = 0;
   private damageFlashT = 0;
   private shakeT = 0;
+  private impactFlashKind: "surge" | "scrap" = "surge";
 
   static readonly W = 72;
   static readonly H = 72;
@@ -158,7 +159,115 @@ export class ApplianceView {
       this.burstSparks(hx, hy, 12, 1.25, 0, 90); // SE corner
       this.damageFlashT = 0.22;
       this.shakeT = 0.2;
+      this.impactFlashKind = "surge";
     }
+  }
+
+  /** Final demise: radial fire, smoke, flash, and heavy shake. */
+  playDeathExplosion(): void {
+    this.setSurgeWarning(false);
+    this.ensureSparkTexture();
+    const hx = ApplianceView.W / 2;
+    const hy = ApplianceView.H / 2;
+
+    // Core blast — hot sparks flying in every direction.
+    this.burstParticles(0, 0, 40, {
+      speedMin: 90,
+      speedMax: 220,
+      scale: 2.6,
+      lifespanMin: 280,
+      lifespanMax: 520,
+      gravityY: 200,
+      tint: [CONFIG.colors.danger, CONFIG.colors.lamp, CONFIG.colors.warn, CONFIG.colors.rust],
+    });
+
+    // Edge shrapnel — reads as the casing blowing apart.
+    const edge = (lx: number, ly: number, a0: number, a1: number) =>
+      this.burstParticles(lx, ly, 16, {
+        speedMin: 70,
+        speedMax: 180,
+        scale: 2.2,
+        lifespanMin: 240,
+        lifespanMax: 460,
+        gravityY: 200,
+        tint: [CONFIG.colors.danger, CONFIG.colors.warn, CONFIG.colors.lamp],
+        angleMin: a0,
+        angleMax: a1,
+      });
+    edge(-hx, 0, 150, 210);
+    edge(hx, 0, -30, 30);
+    edge(0, -hy, 240, 300);
+    edge(0, hy, 60, 120);
+    edge(-hx, -hy, 180, 270);
+    edge(hx, -hy, 270, 360);
+    edge(-hx, hy, 90, 180);
+    edge(hx, hy, 0, 90);
+
+    // Lingering smoke / debris — slower, darker, wider puff.
+    this.burstParticles(0, 0, 28, {
+      speedMin: 25,
+      speedMax: 85,
+      scale: 3.4,
+      lifespanMin: 500,
+      lifespanMax: 900,
+      gravityY: 35,
+      tint: [CONFIG.colors.panelDark, CONFIG.colors.grime, CONFIG.colors.panel, CONFIG.colors.textDim],
+    });
+
+    this.damageFlashT = 0.38;
+    this.shakeT = 0.45;
+    this.impactFlashKind = "surge";
+  }
+
+  /** Dismantled for parts — metal shards and dust, cooler than a death blast. */
+  playScrapBurst(): void {
+    this.setSurgeWarning(false);
+    this.ensureSparkTexture();
+    const hx = ApplianceView.W / 2;
+    const hy = ApplianceView.H / 2;
+
+    // Center wrench-apart — slate/teal metal chunks.
+    this.burstParticles(0, 0, 26, {
+      speedMin: 55,
+      speedMax: 150,
+      scale: 2.2,
+      lifespanMin: 220,
+      lifespanMax: 420,
+      gravityY: 240,
+      tint: [CONFIG.colors.steel, CONFIG.colors.hp, CONFIG.colors.grime, CONFIG.colors.panel],
+    });
+
+    const edge = (lx: number, ly: number, a0: number, a1: number) =>
+      this.burstParticles(lx, ly, 10, {
+        speedMin: 45,
+        speedMax: 130,
+        scale: 1.9,
+        lifespanMin: 200,
+        lifespanMax: 380,
+        gravityY: 240,
+        tint: [CONFIG.colors.steel, CONFIG.colors.hp, CONFIG.colors.grime],
+        angleMin: a0,
+        angleMax: a1,
+      });
+    edge(-hx, 0, 150, 210);
+    edge(hx, 0, -30, 30);
+    edge(0, -hy, 240, 300);
+    edge(0, hy, 60, 120);
+
+    // Dust puff as panels hit the floor.
+    this.burstParticles(0, 0, 18, {
+      speedMin: 18,
+      speedMax: 55,
+      scale: 2.8,
+      lifespanMin: 400,
+      lifespanMax: 700,
+      gravityY: 60,
+      tint: [CONFIG.colors.grime, CONFIG.colors.panelDark, CONFIG.colors.textDim],
+    });
+
+    this.impactFlashKind = "scrap";
+    this.damageFlashT = 0.24;
+    this.shakeT = 0.3;
   }
 
   update(appliance: Appliance | null, dt: number): void {
@@ -275,7 +384,14 @@ export class ApplianceView {
     if (this.damageFlashT > 0) {
       this.damageFlashT -= dt;
       const hot = this.damageFlashT > 0.1;
-      const tint = hot ? CONFIG.colors.text : CONFIG.colors.danger;
+      const tint =
+        this.impactFlashKind === "scrap"
+          ? hot
+            ? CONFIG.colors.hp
+            : CONFIG.colors.steel
+          : hot
+            ? CONFIG.colors.text
+            : CONFIG.colors.danger;
       if (this.sprite) this.sprite.setTint(tint);
       else this.body.setFillStyle(tint);
       if (this.damageFlashT <= 0) {
@@ -286,7 +402,7 @@ export class ApplianceView {
 
     if (this.shakeT > 0) {
       this.shakeT -= dt;
-      const amp = 3;
+      const amp = this.shakeT > 0.25 ? 6 : 3;
       this.container.setPosition(
         this.restX + (Math.random() - 0.5) * amp * 2,
         this.restY + (Math.random() - 0.5) * amp * 2,
@@ -312,21 +428,52 @@ export class ApplianceView {
     angleMin = 0,
     angleMax = 360,
   ): void {
+    this.burstParticles(localX, localY, count, {
+      speedMin: 50 * intensity,
+      speedMax: 140 * intensity,
+      scale: 1.8 * intensity,
+      lifespanMin: 180,
+      lifespanMax: 380,
+      gravityY: 220,
+      tint: [CONFIG.colors.lamp, CONFIG.colors.warn, CONFIG.colors.text, CONFIG.colors.danger],
+      angleMin,
+      angleMax,
+      destroyAfter: 450,
+    });
+  }
+
+  private burstParticles(
+    localX: number,
+    localY: number,
+    count: number,
+    opts: {
+      speedMin: number;
+      speedMax: number;
+      scale: number;
+      lifespanMin: number;
+      lifespanMax: number;
+      gravityY: number;
+      tint: number[];
+      angleMin?: number;
+      angleMax?: number;
+      destroyAfter?: number;
+    },
+  ): void {
     const x = this.restX + localX;
     const y = this.restY + localY;
     const particles = this.scene.add.particles(x, y, SPARK_TEX, {
-      speed: { min: 50 * intensity, max: 140 * intensity },
-      angle: { min: angleMin, max: angleMax },
-      scale: { start: 1.8 * intensity, end: 0 },
+      speed: { min: opts.speedMin, max: opts.speedMax },
+      angle: { min: opts.angleMin ?? 0, max: opts.angleMax ?? 360 },
+      scale: { start: opts.scale, end: 0 },
       alpha: { start: 1, end: 0 },
-      lifespan: { min: 180, max: 380 },
-      gravityY: 220,
-      tint: [CONFIG.colors.lamp, CONFIG.colors.warn, CONFIG.colors.text, CONFIG.colors.danger],
+      lifespan: { min: opts.lifespanMin, max: opts.lifespanMax },
+      gravityY: opts.gravityY,
+      tint: opts.tint,
       emitting: false,
     });
     particles.setDepth(FX_DEPTH);
     particles.explode(count);
-    this.scene.time.delayedCall(450, () => {
+    this.scene.time.delayedCall(opts.destroyAfter ?? 950, () => {
       if (particles.active) particles.destroy();
     });
   }

@@ -856,12 +856,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Arcade font has no `$`; floats use outlined `+N` (gold) or `-N` (danger). */
-  private spawnMoneyFloat(x: number, y: number, amount: number): void {
+  private spawnMoneyFloat(x: number, y: number, amount: number, fillOverride?: number): void {
     if (amount === 0) return;
     const spend = amount < 0;
     const label = spend ? `-${Math.abs(amount)}` : `+${amount}`;
     const startY = y - 8;
-    const fill = spend ? CONFIG.colors.danger : CONFIG.colors.money;
+    const fill = fillOverride ?? (spend ? CONFIG.colors.danger : CONFIG.colors.money);
     const outline = 0x0a0a08;
     const children: Phaser.GameObjects.GameObject[] = [];
     const size = CONFIG.font.sizeLg;
@@ -1299,6 +1299,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const yielded = a.scrapYield();
+    const view = this.views[key];
+    view.playScrapBurst();
+    if (yielded > 0) {
+      this.spawnMoneyFloat(view.worldX, view.worldY - 20, yielded, CONFIG.colors.hp);
+    }
     this.parts += yielded;
     this.scraps++;
     this.appliances[key] = null;
@@ -1372,6 +1377,7 @@ export class GameScene extends Phaser.Scene {
     if (!a) return;
     if (this.applianceWasAlive[key] && !a.alive) {
       this.sfx.playApplianceDead();
+      this.views[key].playDeathExplosion();
       this.applianceWasAlive[key] = false;
     }
   }
