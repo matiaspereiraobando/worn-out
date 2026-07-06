@@ -55,7 +55,8 @@ export class ApplianceView {
     this.title = scene.add
       .bitmapText(0, -H / 2 - 12, CONFIG.font.key, label, CONFIG.font.sizeSm)
       .setTint(CONFIG.colors.text)
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(false);
 
     this.hpBarBg = scene.add
       .rectangle(0, H / 2 + 12, W, 6, CONFIG.colors.panelDark)
@@ -70,7 +71,8 @@ export class ApplianceView {
     this.status = scene.add
       .bitmapText(0, H / 2 + 24, CONFIG.font.key, "", CONFIG.font.sizeSm)
       .setTint(CONFIG.colors.textDim)
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(false);
     if (scene.textures.exists(ASSETS.sprites.icons.key)) {
       this.plugIcon = scene.add
         .sprite(ApplianceView.PLUG_OX, ApplianceView.PLUG_OY, ASSETS.sprites.icons.key, 4)

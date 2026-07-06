@@ -9,6 +9,8 @@ import type { RunResult } from "./GameScene";
 /** End screen: background art + bill-style exploitation receipt (GDD §15). */
 export class GameOverScene extends Phaser.Scene {
   private popupLayer!: Phaser.GameObjects.Container;
+  private key1!: Phaser.Input.Keyboard.Key;
+  private key2!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super("gameover");
@@ -19,7 +21,7 @@ export class GameOverScene extends Phaser.Scene {
     const receiptCy = 242;
     const paperH = 416;
 
-    this.buildBackground(result);
+    this.buildBackground();
     this.popupLayer = this.buildScoreReceipt(result, cx, receiptCy, paperH);
     this.popupLayer.setDepth(20).setVisible(true).setAlpha(0).setScale(0.92);
 
@@ -36,17 +38,31 @@ export class GameOverScene extends Phaser.Scene {
       });
     });
 
+    const kb = this.input.keyboard;
+    if (kb) {
+      this.key1 = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+      this.key2 = kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    }
+
     this.input.keyboard?.once("keydown-SPACE", () => this.startRetry());
     this.input.keyboard?.once("keydown-ENTER", () => this.startRetry());
+  }
+
+  update(): void {
+    if (this.key1 && Phaser.Input.Keyboard.JustDown(this.key1)) this.startRetry();
+    if (this.key2 && Phaser.Input.Keyboard.JustDown(this.key2)) this.startMenu();
+  }
+
+  private startMenu(): void {
+    this.scene.start("menu");
   }
 
   private startRetry(): void {
     this.scene.start("game", { mode: "day1" });
   }
 
-  private buildBackground(result: RunResult): void {
+  private buildBackground(): void {
     const c = CONFIG.colors;
-    const cx = CONFIG.width / 2;
     const bgKey = this.textures.exists(ASSETS.sprites.gameOverScreen.key)
       ? ASSETS.sprites.gameOverScreen.key
       : "fallback-game-over-screen";
@@ -56,14 +72,6 @@ export class GameOverScene extends Phaser.Scene {
       .rectangle(0, 0, CONFIG.width, CONFIG.height, c.bg, 0.55)
       .setOrigin(0)
       .setDepth(5);
-
-    this.add
-      .bitmapText(cx, 72, CONFIG.font.key, result.causeText, CONFIG.font.sizeSm)
-      .setTint(c.danger)
-      .setOrigin(0.5)
-      .setDepth(10)
-      .setCenterAlign()
-      .setMaxWidth(CONFIG.width - 80);
   }
 
   private buildScoreReceipt(
@@ -197,15 +205,9 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   private buildActions(cx: number, actionsY: number): void {
-    const c = CONFIG.colors;
-    const retryBtn = new Button(this, 0, 0, 140, 28, "RETRY", () => this.startRetry());
-    const menuBtn = new Button(this, 0, 32, 140, 28, "MENU", () => this.scene.start("menu"));
+    const retryBtn = new Button(this, 0, 0, 160, 28, "1. RETRY", () => this.startRetry());
+    const menuBtn = new Button(this, 0, 32, 160, 28, "2. MENU", () => this.startMenu());
 
-    const hint = this.add
-      .bitmapText(0, 56, CONFIG.font.key, PHRASES.gameOverRetryHint, CONFIG.font.sizeSm)
-      .setTint(c.textDim)
-      .setOrigin(0.5);
-
-    this.add.container(cx, actionsY, [retryBtn.container, menuBtn.container, hint]).setDepth(30);
+    this.add.container(cx, actionsY, [retryBtn.container, menuBtn.container]).setDepth(30);
   }
 }

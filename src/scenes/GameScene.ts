@@ -165,7 +165,6 @@ export class GameScene extends Phaser.Scene {
   private receiptTutorialText!: Phaser.GameObjects.BitmapText;
   private toast!: Toast;
   private tutorialCard!: TutorialCard;
-  private controlHintsText!: Phaser.GameObjects.BitmapText;
   private mode: GameMode = "day1";
   private tutorialManager: TutorialManager | null = null;
   private lastPlayerX = 0;
@@ -297,9 +296,6 @@ export class GameScene extends Phaser.Scene {
       .rectangle(0, CONFIG.world.hudHeight, CONFIG.width, 1, c.grime, 0.9)
       .setOrigin(0)
       .setDepth(50);
-    this.bt(CONFIG.width / 2, CONFIG.world.hudHeight + 4, "APARTMENT", CONFIG.font.sizeSm)
-      .setTint(CONFIG.colors.textDim)
-      .setOrigin(0.5, 0);
   }
 
   private buildHud(): void {
@@ -373,7 +369,7 @@ export class GameScene extends Phaser.Scene {
     this.receiptItemLabels = [];
     this.receiptItemAmounts = [];
     const paperW = 260;
-    const paperH = 320;
+    const paperH = 348;
     const colL = -108;
     const colR = 108;
     const ruleW = colR - colL;
@@ -448,20 +444,22 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
     children.push(this.receiptDebtRow);
 
-    const scoreLabel = this.bt(colL, totalTop + 98, "TO SCORE", CONFIG.font.sizeSm)
+    const scoreY = totalTop + 88;
+    const scoreLabel = this.bt(colL, scoreY, "TO SCORE", CONFIG.font.sizeSm)
       .setOrigin(0, 0.5)
       .setTint(CONFIG.colors.money);
-    this.receiptScoreAmount = this.bt(colR, totalTop + 98, "", CONFIG.font.sizeSm)
+    this.receiptScoreAmount = this.bt(colR, scoreY, "", CONFIG.font.sizeSm)
       .setOrigin(1, 0.5)
       .setTint(CONFIG.colors.money);
-    const scoreRule = this.add.rectangle(0, totalTop + 107, ruleW, 1, ruleColor).setOrigin(0.5);
+    const scoreRule = this.add.rectangle(0, scoreY + 9, ruleW, 1, ruleColor).setOrigin(0.5);
     this.receiptScoreRow = this.add
       .container(0, 0, [scoreLabel, this.receiptScoreAmount, scoreRule])
       .setVisible(false);
     children.push(this.receiptScoreRow);
 
-    this.receiptCloseText = this.bt(0, 138, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
-    this.receiptTutorialText = this.bt(0, 152, "", CONFIG.font.sizeSm)
+    const closeY = paperH / 2 - 24;
+    this.receiptCloseText = this.bt(0, closeY, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    this.receiptTutorialText = this.bt(0, closeY + 16, "", CONFIG.font.sizeSm)
       .setOrigin(0.5)
       .setTint(CONFIG.colors.warn)
       .setVisible(false);
@@ -516,7 +514,6 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5);
       this.door.setVisible(false);
     }
-    this.bt(this.doorPos.x, this.doorPos.y - 42, "DOOR").setOrigin(0.5).setTint(CONFIG.colors.textDim);
     const hasVendor = this.textures.exists(ASSETS.sprites.vendor.key);
     const hasCart = this.textures.exists(ASSETS.sprites.cart.key);
     let vendorTex = "fallback-vendor";
@@ -563,6 +560,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.menuTitle = this.bt(0, -48, "", CONFIG.font.sizeMd).setOrigin(0.5).setTint(CONFIG.colors.text);
     this.menuHint = this.bt(0, 44, "1-N select", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.textDim);
+    this.menuHint.setVisible(false);
     this.menuContainer = this.add.container(0, 0, [bg, this.menuTitle, this.menuHint]).setVisible(false).setDepth(1000);
 
     for (let i = 0; i < 6; i++) {
@@ -571,15 +569,6 @@ export class GameScene extends Phaser.Scene {
       this.menuButtons.push(btn);
       this.menuContainer.add(btn.container);
     }
-
-    this.controlHintsText = this.bt(
-      CONFIG.width / 2,
-      CONFIG.height - 56,
-      "Arrows move  E interact  1-N action  R pickup",
-      CONFIG.font.sizeSm,
-    )
-      .setOrigin(0.5)
-      .setTint(CONFIG.colors.textDim);
   }
 
   private initTutorial(data: GameSceneData): void {
@@ -591,7 +580,7 @@ export class GameScene extends Phaser.Scene {
       spawnCoinNearPlayer: () => this.spawnCoinNearPlayer(),
       scriptTutorialFridgeDamage: () => this.scriptTutorialFridgeDamage(),
       setReceiptTutorialNote: (note) => this.setReceiptTutorialNote(note),
-      setControlHintsVisible: (visible) => this.controlHintsText.setVisible(visible),
+      setControlHintsVisible: () => {},
       triggerTutorialBill: () => this.triggerTutorialBill(),
       transitionToDay1: () => this.transitionToDay1(),
     });
@@ -617,7 +606,6 @@ export class GameScene extends Phaser.Scene {
     const fadeMs = CONFIG.tutorial.dayTransitionFadeMs;
     this.tutorialCard.dismiss();
     this.setReceiptTutorialNote(null);
-    this.controlHintsText.setVisible(true);
     this.cameras.main.fadeOut(fadeMs, 0, 0, 0, (_camera: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress < 1) return;
       setTutorialDone();
@@ -939,8 +927,6 @@ export class GameScene extends Phaser.Scene {
     if (this.menuMode === "appliance" && this.menuContainer.visible) this.refreshMenuOptions();
     this.order.forEach((key) => this.views[key].update(this.appliances[key], dtReal));
     this.refreshHud();
-    if (this.tutorialCard.isVisible()) this.controlHintsText.setVisible(false);
-    else if (!this.isDay0()) this.controlHintsText.setVisible(true);
     if (dt > 0 && !this.isDay0()) this.checkGameOver();
   }
 
@@ -1511,7 +1497,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateReceiptCloseText(): void {
     const secs = Math.max(0, Math.ceil(this.receiptCloseLeft));
-    this.receiptCloseText.setText(`CLOSE (${secs} s)`);
+    this.receiptCloseText.setText(PHRASES.billClose(secs));
   }
 
   private closeBillReceipt(): void {
@@ -1808,10 +1794,11 @@ export class GameScene extends Phaser.Scene {
       washes: this.washes,
     });
 
+    const causeText = this.pickGameOverMessage(cause);
     const raw = this.currentRawScore();
     const result: RunResult = {
       cause,
-      causeText: PHRASES.gameOver[cause],
+      causeText,
       rawScore: raw,
       mult: archetype.mult,
       archetypeId: archetype.id,
@@ -1839,15 +1826,7 @@ export class GameScene extends Phaser.Scene {
     if (this.endGameTransitioning) return;
     this.endGameTransitioning = true;
 
-    const cx = CONFIG.width / 2;
-    const cy = CONFIG.height / 2;
-    this.add
-      .bitmapText(cx, cy - 30, CONFIG.font.key, result.causeText, CONFIG.font.sizeMd)
-      .setTint(CONFIG.colors.danger)
-      .setOrigin(0.5)
-      .setDepth(2000)
-      .setCenterAlign()
-      .setMaxWidth(CONFIG.width - 80);
+    this.showGameOverCauseFlash(causeText);
 
     this.time.delayedCall(CONFIG.gameOver.holdMs, () => {
       this.cameras.main.fadeOut(
@@ -1861,5 +1840,34 @@ export class GameScene extends Phaser.Scene {
         },
       );
     });
+  }
+
+  private pickGameOverMessage(cause: GameOverCause): string {
+    const pool = PHRASES.gameOverMessages[cause];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  private showGameOverCauseFlash(text: string): void {
+    const c = CONFIG.colors;
+    const cx = CONFIG.width / 2;
+    const cy = CONFIG.height / 2;
+    const panelW = 500;
+    const panelH = 88;
+    const panel = this.add
+      .rectangle(0, 0, panelW, panelH, c.bg, 0.94)
+      .setStrokeStyle(3, c.danger)
+      .setOrigin(0.5);
+    const inner = this.add
+      .rectangle(0, 0, panelW - 8, panelH - 8, c.panelDark, 0.55)
+      .setStrokeStyle(1, c.grime)
+      .setOrigin(0.5);
+    const label = this.add
+      .bitmapText(0, 0, CONFIG.font.key, text, CONFIG.font.sizeLg)
+      .setTint(c.text)
+      .setOrigin(0.5)
+      .setCenterAlign()
+      .setMaxWidth(panelW - 40);
+
+    this.add.container(cx, cy - 20, [panel, inner, label]).setDepth(2000);
   }
 }

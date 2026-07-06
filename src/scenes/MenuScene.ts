@@ -10,12 +10,16 @@ export class MenuScene extends Phaser.Scene {
   private menuOpen = false;
   private promptBanner!: Phaser.GameObjects.Container;
   private modalLayer!: Phaser.GameObjects.Container;
+  private menuOptionActions: Array<() => void> = [];
+  private key1!: Phaser.Input.Keyboard.Key;
+  private key2!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super("menu");
   }
 
   create(): void {
+    this.menuOpen = false;
     const c = CONFIG.colors;
     const cx = CONFIG.width / 2;
     const cy = CONFIG.height / 2;
@@ -52,15 +56,38 @@ export class MenuScene extends Phaser.Scene {
     this.modalLayer = this.buildModal(cx, cy);
     this.modalLayer.setVisible(false).setAlpha(0).setScale(0.92).setDepth(20);
 
+    const kb = this.input.keyboard;
+    if (kb) {
+      this.key1 = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+      this.key2 = kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    }
+
     this.input.keyboard?.on("keydown-E", () => this.openMenu());
     this.input.keyboard?.on("keydown-ENTER", () => this.openMenu());
     this.input.keyboard?.on("keydown-SPACE", () => this.openMenu());
   }
 
+  shutdown(): void {
+    this.input.keyboard?.off("keydown-E");
+    this.input.keyboard?.off("keydown-ENTER");
+    this.input.keyboard?.off("keydown-SPACE");
+  }
+
+  update(): void {
+    if (!this.menuOpen) return;
+    if (this.key1 && Phaser.Input.Keyboard.JustDown(this.key1)) this.triggerMenuOption(0);
+    if (this.key2 && Phaser.Input.Keyboard.JustDown(this.key2)) this.triggerMenuOption(1);
+  }
+
+  private triggerMenuOption(index: number): void {
+    if (!this.menuOpen) return;
+    this.menuOptionActions[index]?.();
+  }
+
   private buildModal(cx: number, cy: number): Phaser.GameObjects.Container {
     const c = CONFIG.colors;
     const panelW = 320;
-    const panelH = 228;
+    const panelH = 276;
 
     const scrim = this.add
       .rectangle(-CONFIG.width / 2, -CONFIG.height / 2, CONFIG.width, CONFIG.height, c.bg, 0.72)
@@ -90,14 +117,21 @@ export class MenuScene extends Phaser.Scene {
       .setCenterAlign()
       .setMaxWidth(panelW - 36);
 
-    const teachBtn = new Button(this, 0, 18, 240, 28, TUTORIAL.gateTeach, () => {
-      this.scene.start("game", { mode: "day0" });
-    });
-    const skipBtn = new Button(this, 0, 54, 240, 28, TUTORIAL.gateSkip, () => {
+    const startDay0 = () => this.scene.start("game", { mode: "day0" });
+    const startDay1 = () => {
       setTutorialSkipped();
       setTutorialDone();
       this.scene.start("game", { mode: "day1" });
-    });
+    };
+    this.menuOptionActions = [startDay0, startDay1];
+
+    const teachBtn = new Button(this, 0, 18, 240, 28, `1. ${TUTORIAL.gateTeach}`, startDay0);
+    const skipBtn = new Button(this, 0, 54, 240, 28, `2. ${TUTORIAL.gateSkip}`, startDay1);
+    const controlHints = this.add
+      .bitmapText(0, 90, CONFIG.font.key, MENU.controlHints, CONFIG.font.sizeSm)
+      .setTint(c.textDim)
+      .setOrigin(0.5, 0)
+      .setCenterAlign();
 
     const modal = this.add.container(cx, cy, [
       scrim,
@@ -108,6 +142,7 @@ export class MenuScene extends Phaser.Scene {
       preview,
       teachBtn.container,
       skipBtn.container,
+      controlHints,
     ]);
 
     scrim.setInteractive({ useHandCursor: false });

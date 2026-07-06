@@ -222,9 +222,9 @@ export const CONFIG = {
   /** Game over (GDD §14). */
   gameOver: {
     debtLimit: 100,
-    fadeOutMs: 800,
+    fadeOutMs: 1500,
     fadeInMs: 600,
-    holdMs: 400,
+    holdMs: 2600,
     // "All criticals dead" is evaluated over the critical appliances present.
   },
 

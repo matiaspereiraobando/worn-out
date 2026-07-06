@@ -23,11 +23,28 @@ export const PHRASES = {
   onWashFail: "Off-balance. The drum shudders; no payout today.",
   onBill: (amount: number) => `Bill of the day: ${amount}. Pay up, or...`,
   onDebt: "You couldn't cover it. The difference is now debt. It compounds, spiritually.",
-  gameOver: {
-    hunger: "You died of hunger. The system won.",
-    hygiene: "The grime won.",
-    debt: "Repossessed. Your belongings go to auction. Starting price: $2.",
-    uninhabitable: "The building was condemned.",
+  billClose: (secs: number) => `CLOSE (${secs} s)  [X]`,
+  gameOverMessages: {
+    hunger: [
+      "You died of hunger. The system won.",
+      "Your stomach gave up before the lease did.",
+      "One meal too few. The fridge sends condolences.",
+    ],
+    hygiene: [
+      "The grime won.",
+      "You became part of the apartment.",
+      "Hygiene hit zero. The neighbors noticed.",
+    ],
+    debt: [
+      "Repossessed. Your belongings go to auction. Starting price: $2.",
+      "Debt limit reached. The bank thanks you for your service.",
+      "You could not pay. The system forecloses with a smile.",
+    ],
+    uninhabitable: [
+      "The building was condemned.",
+      "Every critical machine is dead. So are your hopes.",
+      "Health department called. They brought a padlock.",
+    ],
   },
   manufacturer:
     'ElectroPlus: +12% sales of the FV-217. CEO: "Consumers have never been more satisfied."',
@@ -48,12 +65,12 @@ export const PHRASES = {
   },
   gameOverScoreTitle: "EXPLOITATION SCORE",
   gameOverScoreTagline: "The system scores your spending, not your survival.",
-  gameOverRetryHint: "CLICK RETRY OR PRESS SPACE",
 } as const;
 
 /** Main menu / title screen copy. */
 export const MENU = {
   prompt: "PRESS E TO SIGN THE LEASE. YOU HAVE NO CHOICE.",
+  controlHints: "Arrows move\nE interact\n1-N action\nR pickup",
   popupTitle: "WORN OUT",
   popupSubtitle: "FIRST SHIFT?",
 } as const;
