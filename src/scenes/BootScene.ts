@@ -59,6 +59,7 @@ export class BootScene extends Phaser.Scene {
     for (const sfx of Object.values(ASSETS.sfx)) {
       this.load.audio(sfx.key, sfx.path);
     }
+    this.load.audio(ASSETS.music.theme.key, ASSETS.music.theme.path);
   }
 
   create(): void {
@@ -76,6 +77,7 @@ export class BootScene extends Phaser.Scene {
     this.makeFallback("fallback-title-screen", 960, 540, CONFIG.colors.bg, CONFIG.colors.panelDark);
     this.makeFallback("fallback-game-over-screen", 960, 540, CONFIG.colors.bg, CONFIG.colors.panelDark);
 
+    this.scene.launch("music");
     this.scene.start("menu");
   }
 

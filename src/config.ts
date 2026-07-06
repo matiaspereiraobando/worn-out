@@ -245,6 +245,12 @@ export const CONFIG = {
   /** Target for a satisfying run (GDD concern #7): aim ~2-4 min with a crisis. */
   targetRunSeconds: 180,
 
+  /** Audio levels. SFX one-shots default to 1.0 in Sfx.ts. */
+  audio: {
+    musicVolume: 0.3,
+    footstepsVolume: 0.25,
+  },
+
   player: {
     speed: 132,
     walkFps: 15,

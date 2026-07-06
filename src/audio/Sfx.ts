@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { ASSETS } from "../assets";
+import { CONFIG } from "../config";
 
 /** Thin wrapper around Phaser sound playback for Worn Out. */
 export class Sfx {
@@ -17,7 +18,7 @@ export class Sfx {
   }
 
   setFootsteps(active: boolean): void {
-    this.setLoop(this.footsteps, ASSETS.sfx.footsteps.key, active, 0.35, (s) => {
+    this.setLoop(this.footsteps, ASSETS.sfx.footsteps.key, active, CONFIG.audio.footstepsVolume, (s) => {
       this.footsteps = s;
     });
   }

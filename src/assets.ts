@@ -48,4 +48,7 @@ export const ASSETS = {
     washFail: { key: "sfx-wash-fail", path: "assets/sfx/wash_fail.mp3" },
     washSuccess: { key: "sfx-wash-success", path: "assets/sfx/wash_success.mp3" },
   },
+  music: {
+    theme: { key: "music-theme", path: "assets/music/worn_out_theme_01.mp3" },
+  },
 } as const;
