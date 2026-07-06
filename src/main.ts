@@ -20,9 +20,11 @@ const game = new Phaser.Game({
     roundPixels: true,
   },
   scale: {
-    mode: Phaser.Scale.NONE,
+    // FIT: keep 960×540 logic, scale display to parent (itch embed + fullscreen button).
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     autoRound: true,
+    expandParent: true,
   },
   scene: [BootScene, MusicScene, MenuScene, GameScene, GameOverScene],
 });

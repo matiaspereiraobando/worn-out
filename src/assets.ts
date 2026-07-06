@@ -16,7 +16,6 @@ export const ASSETS = {
     coin: { key: "coin-strip", path: "assets/sprites/props/coin_32x32_strip.png" },
     icons: { key: "ui-icons", path: "assets/sprites/ui/icons_32x32_sheet.png" },
     cart: { key: "vendor-cart", path: "assets/sprites/props/vendor_cart_32x32.png" },
-    billPaper: { key: "bill-paper", path: "assets/sprites/ui/bill_receipt_paper.png" },
     stripWarn: { key: "strip-warn", path: "assets/sprites/ui/strip_warn_960x40.png" },
     stripDanger: { key: "strip-danger", path: "assets/sprites/ui/strip_danger_960x40.png" },
     titleScreen: { key: "title-screen", path: "assets/sprites/title_screen_960x540.png" },

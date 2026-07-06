@@ -50,7 +50,6 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
-    this.load.image(ASSETS.sprites.billPaper.key, ASSETS.sprites.billPaper.path);
     this.load.image(ASSETS.sprites.stripWarn.key, ASSETS.sprites.stripWarn.path);
     this.load.image(ASSETS.sprites.stripDanger.key, ASSETS.sprites.stripDanger.path);
     this.load.image(ASSETS.sprites.titleScreen.key, ASSETS.sprites.titleScreen.path);
@@ -71,7 +70,6 @@ export class BootScene extends Phaser.Scene {
     this.makeFallback("fallback-door", 24, 30, 0x564531, CONFIG.colors.grime);
     this.makeFallback("fallback-vendor", 24, 30, 0x7f8ba6, CONFIG.colors.grime);
     this.makeFallback("fallback-coin", 10, 10, CONFIG.colors.money, 0x8a7a2e);
-    this.makeFallback("fallback-bill-paper", 200, 280, 0xe8dcc8, CONFIG.colors.grime);
     this.makeFallback("fallback-strip-warn", 960, 40, CONFIG.colors.warn, CONFIG.colors.grime);
     this.makeFallback("fallback-strip-danger", 960, 40, CONFIG.colors.danger, CONFIG.colors.grime);
     this.makeFallback("fallback-title-screen", 960, 540, CONFIG.colors.bg, CONFIG.colors.panelDark);

@@ -3,6 +3,7 @@ import { CONFIG, type ApplianceKey } from "../config";
 import { Appliance } from "../model/Appliance";
 import { ApplianceView } from "../ui/ApplianceView";
 import { Button } from "../ui/Button";
+import { addOutlinedBitmapText, setOutlinedBitmapText, tintBitmapText } from "../ui/bitmapText";
 import { Toast } from "../ui/Toast";
 import { TutorialCard } from "../ui/TutorialCard";
 import { PHRASES, TUTORIAL } from "../phrases";
@@ -387,8 +388,8 @@ export class GameScene extends Phaser.Scene {
     const colL = -108;
     const colR = 108;
     const ruleW = colR - colL;
-    const ink = CONFIG.colors.bg;
-    const inkDim = CONFIG.colors.panel;
+    const ink = CONFIG.colors.bitmapInk;
+    const inkDim = CONFIG.colors.grime;
     const paperFill = 0xe8dcc8;
     const ruleColor = 0x8a8470;
 
@@ -400,8 +401,8 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, CONFIG.colors.grime)
       .setOrigin(0.5);
 
-    const title = this.bt(0, -138, "DAILY BILL", CONFIG.font.sizeMd).setOrigin(0.5).setTint(ink);
-    this.receiptDayText = this.bt(0, -120, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
+    const title = tintBitmapText(this.bt(0, -138, "DAILY BILL", CONFIG.font.sizeMd).setOrigin(0.5), ink);
+    this.receiptDayText = tintBitmapText(this.bt(0, -120, "", CONFIG.font.sizeSm).setOrigin(0.5), inkDim);
     const headerRule = this.add.rectangle(0, -108, ruleW, 1, ruleColor).setOrigin(0.5);
 
     const children: Phaser.GameObjects.GameObject[] = [scrim, paper, title, this.receiptDayText, headerRule];
@@ -409,8 +410,8 @@ export class GameScene extends Phaser.Scene {
     const itemNames = ["RENT", "ELEC", "WATER", "FOOD"];
     let y = -88;
     for (const name of itemNames) {
-      const label = this.bt(colL, y, name, CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(ink);
-      const amount = this.bt(colR, y, "", CONFIG.font.sizeSm).setOrigin(1, 0.5).setTint(ink);
+      const label = tintBitmapText(this.bt(colL, y, name, CONFIG.font.sizeSm).setOrigin(0, 0.5), ink);
+      const amount = tintBitmapText(this.bt(colR, y, "", CONFIG.font.sizeSm).setOrigin(1, 0.5), ink);
       const rule = this.add.rectangle(0, y + 9, ruleW, 1, ruleColor).setOrigin(0.5);
       this.receiptItemLabels.push(label);
       this.receiptItemAmounts.push(amount);
@@ -419,10 +420,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Optional price-hike surcharge row (hidden unless active).
-    const hikeLabel = this.bt(colL, y, "HIKE", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(CONFIG.colors.danger);
-    this.receiptHikeAmount = this.bt(colR, y, "", CONFIG.font.sizeSm)
-      .setOrigin(1, 0.5)
-      .setTint(CONFIG.colors.danger);
+    const hikeLabel = tintBitmapText(
+      this.bt(colL, y, "HIKE", CONFIG.font.sizeSm).setOrigin(0, 0.5),
+      CONFIG.colors.danger,
+    );
+    this.receiptHikeAmount = tintBitmapText(
+      this.bt(colR, y, "", CONFIG.font.sizeSm).setOrigin(1, 0.5),
+      CONFIG.colors.danger,
+    );
     const hikeRule = this.add.rectangle(0, y + 9, ruleW, 1, ruleColor).setOrigin(0.5);
     this.receiptHikeRow = this.add.container(0, 0, [hikeLabel, this.receiptHikeAmount, hikeRule]).setVisible(false);
     children.push(this.receiptHikeRow);
@@ -432,26 +437,27 @@ export class GameScene extends Phaser.Scene {
     children.push(this.add.rectangle(0, totalTop, ruleW, 1, ink).setOrigin(0.5));
     children.push(this.add.rectangle(0, totalTop + 3, ruleW, 1, ink).setOrigin(0.5));
 
-    const totalLabel = this.bt(colL, totalTop + 22, "TOTAL", CONFIG.font.sizeMd).setOrigin(0, 0.5).setTint(ink);
-    this.receiptTotalAmount = this.bt(colR, totalTop + 22, "", CONFIG.font.sizeMd)
-      .setOrigin(1, 0.5)
-      .setTint(ink);
+    const totalLabel = tintBitmapText(this.bt(colL, totalTop + 22, "TOTAL", CONFIG.font.sizeMd).setOrigin(0, 0.5), ink);
+    this.receiptTotalAmount = tintBitmapText(
+      this.bt(colR, totalTop + 22, "", CONFIG.font.sizeMd).setOrigin(1, 0.5),
+      ink,
+    );
     children.push(totalLabel, this.receiptTotalAmount);
     children.push(this.add.rectangle(0, totalTop + 34, ruleW, 1, ruleColor).setOrigin(0.5));
 
-    const paidLabel = this.bt(colL, totalTop + 50, "PAID", CONFIG.font.sizeSm).setOrigin(0, 0.5).setTint(inkDim);
-    this.receiptPaidAmount = this.bt(colR, totalTop + 50, "", CONFIG.font.sizeSm)
-      .setOrigin(1, 0.5)
-      .setTint(inkDim);
+    const paidLabel = tintBitmapText(this.bt(colL, totalTop + 50, "PAID", CONFIG.font.sizeSm).setOrigin(0, 0.5), inkDim);
+    this.receiptPaidAmount = tintBitmapText(
+      this.bt(colR, totalTop + 50, "", CONFIG.font.sizeSm).setOrigin(1, 0.5),
+      inkDim,
+    );
     children.push(paidLabel, this.receiptPaidAmount);
     children.push(this.add.rectangle(0, totalTop + 59, ruleW, 1, ruleColor).setOrigin(0.5));
 
-    const debtLabel = this.bt(colL, totalTop + 74, "DEBT", CONFIG.font.sizeSm)
-      .setOrigin(0, 0.5)
-      .setTint(CONFIG.colors.danger);
-    this.receiptDebtAmount = this.bt(colR, totalTop + 74, "", CONFIG.font.sizeSm)
-      .setOrigin(1, 0.5)
-      .setTint(CONFIG.colors.danger);
+    const debtLabel = tintBitmapText(this.bt(colL, totalTop + 74, "DEBT", CONFIG.font.sizeSm).setOrigin(0, 0.5), CONFIG.colors.danger);
+    this.receiptDebtAmount = tintBitmapText(
+      this.bt(colR, totalTop + 74, "", CONFIG.font.sizeSm).setOrigin(1, 0.5),
+      CONFIG.colors.danger,
+    );
     const debtRule = this.add.rectangle(0, totalTop + 83, ruleW, 1, ruleColor).setOrigin(0.5);
     this.receiptDebtRow = this.add
       .container(0, 0, [debtLabel, this.receiptDebtAmount, debtRule])
@@ -459,12 +465,14 @@ export class GameScene extends Phaser.Scene {
     children.push(this.receiptDebtRow);
 
     const scoreY = totalTop + 88;
-    const scoreLabel = this.bt(colL, scoreY, "TO SCORE", CONFIG.font.sizeSm)
-      .setOrigin(0, 0.5)
-      .setTint(CONFIG.colors.money);
-    this.receiptScoreAmount = this.bt(colR, scoreY, "", CONFIG.font.sizeSm)
-      .setOrigin(1, 0.5)
-      .setTint(CONFIG.colors.money);
+    const scoreLabel = tintBitmapText(
+      this.bt(colL, scoreY, "TO SCORE", CONFIG.font.sizeSm).setOrigin(0, 0.5),
+      CONFIG.colors.money,
+    );
+    this.receiptScoreAmount = tintBitmapText(
+      this.bt(colR, scoreY, "", CONFIG.font.sizeSm).setOrigin(1, 0.5),
+      CONFIG.colors.money,
+    );
     const scoreRule = this.add.rectangle(0, scoreY + 9, ruleW, 1, ruleColor).setOrigin(0.5);
     this.receiptScoreRow = this.add
       .container(0, 0, [scoreLabel, this.receiptScoreAmount, scoreRule])
@@ -472,11 +480,11 @@ export class GameScene extends Phaser.Scene {
     children.push(this.receiptScoreRow);
 
     const closeY = paperH / 2 - 24;
-    this.receiptCloseText = this.bt(0, closeY, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(inkDim);
-    this.receiptTutorialText = this.bt(0, closeY + 16, "", CONFIG.font.sizeSm)
-      .setOrigin(0.5)
-      .setTint(CONFIG.colors.warn)
-      .setVisible(false);
+    this.receiptCloseText = tintBitmapText(this.bt(0, closeY, "", CONFIG.font.sizeSm).setOrigin(0.5), inkDim);
+    this.receiptTutorialText = tintBitmapText(
+      this.bt(0, closeY + 16, "", CONFIG.font.sizeSm).setOrigin(0.5),
+      CONFIG.colors.warn,
+    ).setVisible(false);
     children.push(this.receiptCloseText, this.receiptTutorialText);
 
     this.receiptUI = this.add
@@ -724,8 +732,8 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setVisible(false);
     }
-    this.eventText = this.bt(0, -6, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.bg);
-    this.vendorText = this.bt(0, 6, "", CONFIG.font.sizeSm).setOrigin(0.5).setTint(CONFIG.colors.panel);
+    this.eventText = tintBitmapText(this.bt(0, -6, "", CONFIG.font.sizeSm).setOrigin(0.5), CONFIG.colors.bitmapInk);
+    this.vendorText = tintBitmapText(this.bt(0, 6, "", CONFIG.font.sizeSm).setOrigin(0.5), CONFIG.colors.grime);
     const children: Phaser.GameObjects.GameObject[] = [this.eventStrip];
     if (this.surgeIcon) children.push(this.surgeIcon);
     children.push(this.eventText, this.vendorText);
@@ -741,11 +749,11 @@ export class GameScene extends Phaser.Scene {
     if (this.eventStrip.texture.key !== key) this.eventStrip.setTexture(key);
     // Dark ink on yellow, bone ink on red.
     if (kind === "danger") {
-      this.eventText.setTint(CONFIG.colors.text);
-      this.vendorText.setTint(CONFIG.colors.textDim);
+      tintBitmapText(this.eventText, CONFIG.colors.text);
+      tintBitmapText(this.vendorText, CONFIG.colors.textDim);
     } else {
-      this.eventText.setTint(CONFIG.colors.bg);
-      this.vendorText.setTint(CONFIG.colors.panel);
+      tintBitmapText(this.eventText, CONFIG.colors.bitmapInk);
+      tintBitmapText(this.vendorText, CONFIG.colors.grime);
     }
   }
 
@@ -761,8 +769,14 @@ export class GameScene extends Phaser.Scene {
       const sprite = hasCoinSprite
         ? this.add.sprite(0, 0, ASSETS.sprites.coin.key, 0).setDisplaySize(20, 20).setDepth(coinDepth)
         : this.add.circle(0, 0, 8, CONFIG.colors.money).setStrokeStyle(2, CONFIG.colors.lamp).setDepth(coinDepth);
-      // Dark digit on the coin face, bone outline for contrast on mustard gold.
-      const label = this.makeOutlinedText("", CONFIG.colors.bg, CONFIG.colors.text).setDepth(coinDepth + 1);
+      const label = addOutlinedBitmapText(
+        this,
+        0,
+        0,
+        "",
+        CONFIG.colors.bitmapInk,
+        CONFIG.colors.bitmapOutline,
+      ).setDepth(coinDepth + 1);
       const pickup: Pickup = {
         sprite,
         glow,
@@ -817,7 +831,7 @@ export class GameScene extends Phaser.Scene {
     p.sprite.setPosition(px, py);
     p.glow.setPosition(px, py);
     p.label.setPosition(px, py);
-    this.setOutlinedText(p.label, `${p.value}`);
+    setOutlinedBitmapText(p.label, `${p.value}`);
     if (p.sprite instanceof Phaser.GameObjects.Sprite) {
       p.sprite.setFrame(0);
     }
@@ -862,23 +876,15 @@ export class GameScene extends Phaser.Scene {
     const label = spend ? `-${Math.abs(amount)}` : `+${amount}`;
     const startY = y - 8;
     const fill = fillOverride ?? (spend ? CONFIG.colors.danger : CONFIG.colors.money);
-    const outline = 0x0a0a08;
-    const children: Phaser.GameObjects.GameObject[] = [];
-    const size = CONFIG.font.sizeLg;
-    for (const [ox, oy] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-      [-1, -1],
-      [1, -1],
-      [-1, 1],
-      [1, 1],
-    ] as const) {
-      children.push(this.bt(ox, oy, label, size).setOrigin(0.5).setTint(outline));
-    }
-    children.push(this.bt(0, 0, label, size).setOrigin(0.5).setTint(fill));
-    const float = this.add.container(x, startY, children).setDepth(1500);
+    const float = addOutlinedBitmapText(
+      this,
+      x,
+      startY,
+      label,
+      fill,
+      CONFIG.colors.bitmapInk,
+      CONFIG.font.sizeLg,
+    ).setDepth(1500);
     this.tweens.add({
       targets: float,
       y: startY - CONFIG.pickups.floatRisePx,
@@ -1407,36 +1413,6 @@ export class GameScene extends Phaser.Scene {
       p.glow.setScale(pulse * 1.15);
       p.glow.setAlpha(glowPulse);
       p.label.setPosition(p.sprite.x, p.baseY + bob);
-    }
-  }
-
-  /** Outlined bitmap label (fill + 8-neighbor stroke), same trick as money floats. */
-  private makeOutlinedText(
-    text: string,
-    fill: number,
-    outline: number,
-    size: number = CONFIG.font.sizeSm,
-  ): Phaser.GameObjects.Container {
-    const children: Phaser.GameObjects.GameObject[] = [];
-    for (const [ox, oy] of [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-      [-1, -1],
-      [1, -1],
-      [-1, 1],
-      [1, 1],
-    ] as const) {
-      children.push(this.bt(ox, oy, text, size).setOrigin(0.5).setTint(outline));
-    }
-    children.push(this.bt(0, 0, text, size).setOrigin(0.5).setTint(fill));
-    return this.add.container(0, 0, children);
-  }
-
-  private setOutlinedText(container: Phaser.GameObjects.Container, text: string): void {
-    for (const child of container.list) {
-      if (child instanceof Phaser.GameObjects.BitmapText) child.setText(text);
     }
   }
 

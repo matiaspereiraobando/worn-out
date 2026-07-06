@@ -33,6 +33,9 @@ export const CONFIG = {
     ok: 0x6e7b5a, // muted olive green
     text: 0xe7e2cd, // bone / cream
     textDim: 0x9a9782, // dim bone
+    /** Dark bitmap digits (coins, HP, bill ink). Use with setTintFill — see bitmapText.ts */
+    bitmapInk: 0x1e2319,
+    bitmapOutline: 0xe7e2cd,
     hp: 0x5f9ea0, // desaturated teal
     hunger: 0xcf8a3f, // warm ochre-orange
     hygiene: 0x5f9fb0, // cool teal-blue
