@@ -45,6 +45,8 @@ export const CONFIG = {
    * empties in ~70-90s, and a dead critical appliance turns that into a crisis.
    */
   stats: {
+    /** GDD §14: red blink + audio cue below this value. */
+    lowWarningThreshold: 25,
     hunger: {
       label: "Hunger",
       max: 100,

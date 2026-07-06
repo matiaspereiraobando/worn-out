@@ -55,6 +55,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image(ASSETS.sprites.stripDanger.key, ASSETS.sprites.stripDanger.path);
     this.load.image(ASSETS.sprites.titleScreen.key, ASSETS.sprites.titleScreen.path);
     this.load.image(ASSETS.sprites.gameOverScreen.key, ASSETS.sprites.gameOverScreen.path);
+
+    for (const sfx of Object.values(ASSETS.sfx)) {
+      this.load.audio(sfx.key, sfx.path);
+    }
   }
 
   create(): void {

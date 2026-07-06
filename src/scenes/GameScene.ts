@@ -14,6 +14,7 @@ import { TutorialManager, type HudBarTarget } from "../tutorial/TutorialManager"
 import { setTutorialDone } from "../tutorial/tutorialStorage";
 import { tryShowTip } from "../tutorial/contextualTips";
 import { detectArchetype, type ArchetypeId } from "../score/archetype";
+import { Sfx } from "../audio/Sfx";
 
 export type GameMode = "day0" | "day1";
 
@@ -167,6 +168,12 @@ export class GameScene extends Phaser.Scene {
   private tutorialCard!: TutorialCard;
   private mode: GameMode = "day1";
   private tutorialManager: TutorialManager | null = null;
+  private sfx!: Sfx;
+  private applianceWasAlive: Record<ApplianceKey, boolean> = {
+    fridge: true,
+    heater: true,
+    washer: true,
+  };
   private lastPlayerX = 0;
   private lastPlayerY = 0;
   private eventBanner!: Phaser.GameObjects.Container;
@@ -210,7 +217,12 @@ export class GameScene extends Phaser.Scene {
     super("game");
   }
 
+  private onShutdown(): void {
+    this.sfx?.destroy();
+  }
+
   create(data: GameSceneData = {}): void {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown, this);
     this.cameras.main.setAlpha(1);
     this.cameras.main.resetFX();
     this.day1TransitionQueued = false;
@@ -232,6 +244,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorialCard = new TutorialCard(this);
     this.buildPickups();
     this.bindKeys();
+    this.sfx = new Sfx(this);
     this.initTutorial(data);
     this.lastPlayerX = this.player.sprite.x;
     this.lastPlayerY = this.player.sprite.y;
@@ -275,6 +288,7 @@ export class GameScene extends Phaser.Scene {
     this.washTimeLeft = 0;
     this.washNeedle = 0;
     this.washDir = 1;
+    this.applianceWasAlive = { fridge: true, heater: true, washer: true };
   }
 
   private bt(x: number, y: number, text: string, size: number = CONFIG.font.sizeSm): Phaser.GameObjects.BitmapText {
@@ -835,6 +849,7 @@ export class GameScene extends Phaser.Scene {
     if (got > 0) {
       this.money += got;
       this.spawnMoneyFloat(floatX, floatY, got);
+      this.sfx.playGetCoin();
       this.tutorialManager?.onPickup();
       this.refreshHud();
     }
@@ -884,6 +899,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.receiptOpen) {
+      this.sfx.setFootsteps(false);
       this.toast.setSuppressed(true);
       this.tickReceipt(dtReal);
       this.refreshHud();
@@ -938,6 +954,7 @@ export class GameScene extends Phaser.Scene {
     if (this.cursors.up?.isDown) vy -= 1;
     if (this.cursors.down?.isDown) vy += 1;
     this.player.move(vx, vy, dt);
+    this.sfx.setFootsteps(vx !== 0 || vy !== 0);
 
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.collectPickupsInRange();
     if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
@@ -1141,12 +1158,15 @@ export class GameScene extends Phaser.Scene {
     if (a.stat === "hunger") {
       this.hunger = Math.min(CONFIG.stats.hunger.max, this.hunger + CONFIG.stats.hunger.restoreOnUse);
       this.meals++;
+      this.sfx.playEat();
     } else if (a.stat === "hygiene") {
       this.hygiene = Math.min(CONFIG.stats.hygiene.max, this.hygiene + CONFIG.stats.hygiene.restoreOnUse);
       this.showers++;
+      this.sfx.playShower();
     }
     this.log(PHRASES.onUse);
     this.tutorialManager?.onUse(key);
+    this.checkApplianceDeath(key);
   }
 
   private startWash(key: ApplianceKey): void {
@@ -1203,9 +1223,12 @@ export class GameScene extends Phaser.Scene {
       this.washes++;
       const washer = this.views.washer;
       this.spawnMoneyFloat(washer.worldX, washer.worldY - 20, w.reward);
+      this.sfx.playWashSuccess();
+      this.sfx.playGetCoin();
       this.log(PHRASES.onWashSuccess);
       this.refreshHud();
     } else {
+      this.sfx.playWashFail();
       this.log(PHRASES.onWashFail);
     }
     this.washing = false;
@@ -1223,6 +1246,8 @@ export class GameScene extends Phaser.Scene {
     this.parts -= CONFIG.actions.repair.partsCost;
     a.repair();
     this.repairs++;
+    this.sfx.playRepair();
+    this.applianceWasAlive[key] = true;
     this.log(PHRASES.onRepair);
     if (this.isDay0()) this.tutorialManager?.onRepair(key);
   }
@@ -1244,6 +1269,8 @@ export class GameScene extends Phaser.Scene {
     const view = this.views[key];
     this.spawnMoneyFloat(view.worldX, view.worldY - 20, -cost);
     this.cleans++;
+    this.sfx.playClean();
+    this.sfx.playPayCash();
     this.log(a.alive ? PHRASES.onClean : PHRASES.onCleanDead);
   }
 
@@ -1259,6 +1286,7 @@ export class GameScene extends Phaser.Scene {
       this.log(`${a.label} plugged in.`);
     }
     this.unplugActions++;
+    this.sfx.playPlugUnplug();
   }
 
   private doCannibalize(key: ApplianceKey): void {
@@ -1274,6 +1302,8 @@ export class GameScene extends Phaser.Scene {
     this.parts += yielded;
     this.scraps++;
     this.appliances[key] = null;
+    this.applianceWasAlive[key] = false;
+    this.sfx.playCannibalize();
     this.log(PHRASES.onCannibalizeSolo(a.label) + ` (+${yielded} parts)`);
     this.closeMenu();
     this.checkGameOver();
@@ -1293,8 +1323,10 @@ export class GameScene extends Phaser.Scene {
     const fresh = new Appliance(key);
     fresh.scrapLockSec = CONFIG.actions.buyNew.scrapLockSec;
     this.appliances[key] = fresh;
+    this.applianceWasAlive[key] = true;
     this.buys++;
     this.newApplianceValue += price;
+    this.sfx.playPayCash();
     this.log(PHRASES.onBuyNew);
   }
 
@@ -1305,6 +1337,7 @@ export class GameScene extends Phaser.Scene {
     this.money -= cost;
     this.parts += CONFIG.vendor.partsBundle;
     this.spawnMoneyFloat(this.doorPos.x, this.doorPos.y - 20, -cost);
+    this.sfx.playPayCash();
     this.log(PHRASES.onVendorBuy);
   }
 
@@ -1326,7 +1359,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tickAppliances(dt: number): void {
-    this.order.forEach((key) => this.appliances[key]?.tick(dt));
+    this.order.forEach((key) => {
+      const a = this.appliances[key];
+      if (!a) return;
+      a.tick(dt);
+      this.checkApplianceDeath(key);
+    });
+  }
+
+  private checkApplianceDeath(key: ApplianceKey): void {
+    const a = this.appliances[key];
+    if (!a) return;
+    if (this.applianceWasAlive[key] && !a.alive) {
+      this.sfx.playApplianceDead();
+      this.applianceWasAlive[key] = false;
+    }
   }
 
   private tickPickups(dt: number): void {
@@ -1433,6 +1480,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (paid > 0) {
       this.spawnMoneyFloat(this.player.sprite.x, this.player.sprite.y - 20, -paid);
+      this.sfx.playPayCash();
     }
     this.closeMenu();
     this.showBillReceipt(bill, paid, shortfall);
@@ -1535,9 +1583,11 @@ export class GameScene extends Phaser.Scene {
       };
       this.log(PHRASES.onSurgeWarning);
       this.maybeShowTip("unplug", TUTORIAL.tips.unplug);
+      this.sfx.playWarningBeep();
     } else {
       this.activeEvent = { type: "hike", warningLeft: CONFIG.events.priceHike.warningSec };
       this.log(PHRASES.onPriceHike);
+      this.sfx.playHikeWarning();
     }
     this.eventBanner.setVisible(true);
     this.updateEventBanner();
@@ -1597,10 +1647,13 @@ export class GameScene extends Phaser.Scene {
       view?.playSurgeDischarge(hitMachine);
       if (target && !target.plugged) {
         this.surgesDodged++;
+        this.sfx.playSurgeDodged();
         this.log(PHRASES.onSurgeMitigated);
       } else if (target?.alive) {
         target.damage(target.maxHp * CONFIG.events.powerSurge.hpLossFraction);
         this.surgesTaken++;
+        this.sfx.playSurgeHit();
+        if (ev.targetKey) this.checkApplianceDeath(ev.targetKey);
         this.log(PHRASES.onSurgeHit);
       }
       this.clearAllSurgeWarnings();
@@ -1620,6 +1673,7 @@ export class GameScene extends Phaser.Scene {
       if (this.nextVendorIn <= 0) {
         this.vendorState = "warning";
         this.vendorTimer = CONFIG.vendor.warningSec;
+        this.sfx.playDoorbell();
         this.log(PHRASES.onVendorWarning);
         this.maybeShowTip("vendor", TUTORIAL.tips.vendor);
       }
@@ -1639,7 +1693,7 @@ export class GameScene extends Phaser.Scene {
         if (this.anims.exists("vendor-idle")) {
           this.vendorNpc.anims.play("vendor-idle");
         }
-        this.playVendorDoorFx();
+        this.playVendorDoorFx(true);
       }
     } else if (this.vendorState === "open") {
       if (!this.interactionPaused) this.vendorTimer -= dtReal;
@@ -1659,7 +1713,7 @@ export class GameScene extends Phaser.Scene {
     this.vendorState = "idle";
     this.vendorNpc.anims.stop();
     this.vendorNpc.setVisible(false);
-    this.playVendorDoorFx();
+    this.playVendorDoorFx(false);
     if (this.menuMode === "vendor") this.closeMenu();
     this.nextVendorIn = Phaser.Math.Between(CONFIG.vendor.minIntervalSec, CONFIG.vendor.maxIntervalSec);
     if (!this.activeEvent) this.eventBanner.setVisible(false);
@@ -1669,7 +1723,10 @@ export class GameScene extends Phaser.Scene {
    * Warm lamp/mustard motes at the door — arrival and leave both read as a slam.
    * Surge FX uses rust/danger and falls; this uses gold/lamp and drifts upward.
    */
-  private playVendorDoorFx(): void {
+  private playVendorDoorFx(arriving: boolean): void {
+    if (arriving) this.sfx.playDoorKnock();
+    else this.sfx.playDoorSlam();
+
     const key = "px-spark";
     if (!this.textures.exists(key)) {
       const g = this.make.graphics({ x: 0, y: 0 });
@@ -1734,6 +1791,14 @@ export class GameScene extends Phaser.Scene {
       this.dayText.setText(`NEXT ${bill.total}  DAY ${this.days + 1}  ${Math.ceil(this.dayTimer)}s${pause}`);
       this.dayText.setTint(bill.multiplier > 1 ? CONFIG.colors.danger : CONFIG.colors.money);
     }
+    this.checkLowStats();
+  }
+
+  private checkLowStats(): void {
+    if (this.gameEnded) return;
+    const threshold = CONFIG.stats.lowWarningThreshold;
+    const low = this.hunger < threshold || this.hygiene < threshold;
+    this.sfx.setLowStats(low);
   }
 
   /** Shared fill: greenish at full, reddish near empty. */
@@ -1781,6 +1846,9 @@ export class GameScene extends Phaser.Scene {
   private endGame(cause: GameOverCause): void {
     if (this.gameEnded) return;
     this.gameEnded = true;
+    this.sfx.setFootsteps(false);
+    this.sfx.setLowStats(false);
+    this.sfx.playGameOver();
     this.washing = false;
     this.washUI?.setVisible(false);
     this.receiptOpen = false;
